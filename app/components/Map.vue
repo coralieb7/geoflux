@@ -4,7 +4,7 @@
 
     <Transition name="fade">
       <div v-if="selectedCountry" class="big-popup-overlay" @click="selectedCountry = null">
-        <CountryTradePopup @click.stop :country="selectedCountry", @close="selectedCountry = null"/>
+        <CountryTradePopup @click.stop :country="selectedCountry" @close="selectedCountry = null"/>
       </div>
     </Transition>
   </div>
