@@ -40,7 +40,7 @@
             <h2 class="text-lg font-semibold text-zinc-600 dark:text-zinc-300 mb-4">Top Importing Countries</h2>
             <div class="flex flex-col gap-2">
               <div v-for="(country, idx) in topImporters" :key="country.iso3" 
-                   @click="router.push(`/country/${country.iso3.toLowerCase()}`)"
+                   @click="router.push(`/countries/${country.iso3.toLowerCase()}`)"
                    class="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors">
                 <div class="flex items-center gap-3">
                   <span class="text-zinc-400 font-bold">{{ idx + 1 }}</span>
@@ -55,7 +55,7 @@
             <h2 class="text-lg font-semibold text-zinc-600 dark:text-zinc-300 mb-4">Top Exporting Countries</h2>
             <div class="flex flex-col gap-2">
               <div v-for="(country, idx) in topExporters" :key="country.iso3" 
-                   @click="router.push(`/country/${country.iso3.toLowerCase()}`)"
+                   @click="router.push(`/countries/${country.iso3.toLowerCase()}`)"
                    class="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors">
                 <div class="flex items-center gap-3">
                   <span class="text-zinc-400 font-bold">{{ idx + 1 }}</span>
@@ -71,7 +71,7 @@
           <h2 class="text-lg font-semibold text-zinc-600 dark:text-zinc-300 mb-4">Top Commodity Categories (Global)</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div v-for="cat in topCategories" :key="cat.name" 
-                 @click="router.push(`/category/${cat.name.toLowerCase().replace(/[\\s&]+/g, '-').replace(/-+/g, '-')}`)"
+                 @click="router.push(`/categories/${cat.name.toLowerCase().replace(/[\\s&]+/g, '-').replace(/-+/g, '-')}`)"
                  class="p-4 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors">
               <h3 class="font-medium text-zinc-800 dark:text-zinc-200 truncate">{{ cat.name }}</h3>
               <p class="text-xs text-zinc-500 mt-1">Total Trade Volume</p>

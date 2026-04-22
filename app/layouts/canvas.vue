@@ -58,7 +58,8 @@ onMounted(async () => {
     // Ensure you have a standard geojson file at this location in your public folder
     canvas.addSource('countries', {
       type: 'geojson',
-      data: '/geojson/countries.geojson' 
+      data: '/geojson/countries.geojson',
+      generateId: true
     })
 
     canvas.addLayer({
@@ -66,11 +67,21 @@ onMounted(async () => {
       type: 'fill',
       source: 'countries',
       paint: {
-        'fill-color': '#333333', // Default color
+        'fill-color': '#333333',
         'fill-opacity': 0.,
         'fill-outline-color': isDark.value ? '#111' : '#fff'
       }
-    }, 'waterway-label') // Insert before labels so text stays on top
+    }, 'waterway-label')
+
+    canvas.addLayer({
+      id: 'country-fills-hover',
+      type: 'fill',
+      source: 'countries',
+      paint: {
+        'fill-color': '#000000',
+        'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.18, 0]
+      }
+    }, 'waterway-label')
 
     // 2. ADD FLOWS LAYER (Straight lines for simplicity to start)
     const flowFeatures = TRADE_FLOWS.map((flow, idx) => ({
@@ -147,7 +158,7 @@ const updateMapVisuals = () => {
 
   // Calculate Country Colors based on dummy data
   // We construct a Mapbox expression: ['match', ['get', 'iso3'], 'USA', 'rgb(x,y,z)', 'CHN', 'rgb(a,b,c)', ... , '#333']
-  const colorExpression: any[] = ['match', ['get', 'iso3']] // Note: adjust 'iso3' if your geojson uses 'ISO_A3'
+  const colorExpression: any[] = ['match', ['get', 'ISO3166-1-Alpha-3']]
 
   let maxValue = 0
   
@@ -186,29 +197,40 @@ const updateMapVisuals = () => {
   canvas.setPaintProperty('country-fills', 'fill-color', colorExpression as any)
 }
 
+let hoveredId: number | string | null = null
+
 const setupInteractions = () => {
-  // Click on a country
-  canvas.on('click', 'country-fills', (e) => {
-    if (route.path !== '/') return // Don't allow clicks if a popup is already open
+  canvas.on('mousemove', 'country-fills', (e) => {
+    if (route.path !== '/') return
     if (!e.features || e.features.length === 0) return
 
-    // Safely extract properties
+    if (hoveredId !== null) {
+      canvas.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
+    }
+    hoveredId = e.features[0]?.id ?? null
+    if (hoveredId !== null) {
+      canvas.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
+    }
+    canvas.getCanvas().style.cursor = 'pointer'
+  })
+
+  canvas.on('mouseleave', 'country-fills', () => {
+    if (hoveredId !== null) {
+      canvas.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
+    }
+    hoveredId = null
+    canvas.getCanvas().style.cursor = ''
+  })
+
+  canvas.on('click', 'country-fills', (e) => {
+    if (route.path !== '/') return
+    if (!e.features || e.features.length === 0) return
     const properties = e.features[0]?.properties
     if (!properties) return
-
-    // Safely look for iso3 or ISO_A3
-    const iso3 = properties.iso3 || properties.ISO_A3
+    const iso3 = properties['ISO3166-1-Alpha-3'] || properties.iso3 || properties.ISO_A3
     if (iso3) {
-      router.push(`/country/${iso3.toLowerCase()}`)
+      router.push(`/countries/${iso3.toLowerCase()}`)
     }
-  })
-
-  // Cursor change on hover
-  canvas.on('mouseenter', 'country-fills', () => {
-    if (route.path === '/') canvas.getCanvas().style.cursor = 'pointer'
-  })
-  canvas.on('mouseleave', 'country-fills', () => {
-    canvas.getCanvas().style.cursor = ''
   })
 }
 
