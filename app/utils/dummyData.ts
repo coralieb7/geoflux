@@ -53,7 +53,6 @@ export const TRADE_CONNECTIONS: Record<string, Record<string, TradeConnectionYea
 
 // Display names for ISO3 codes not present in TRADE_DATA
 const SPECIAL_ISO3_NAMES: Record<string, string> = {
-  WLD: 'World',
   EUU: 'European Union',
 }
 

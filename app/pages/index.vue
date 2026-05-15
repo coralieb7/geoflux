@@ -3,22 +3,7 @@
     
     <div class="absolute top-5 left-1/2 transform -translate-x-1/2 flex items-start gap-2 z-30 pointer-events-auto">
       
-      <div class="w-[80vw] md:w-96 transition-all duration-300">
-        <UCommandPalette 
-          v-model:query="searchQuery"
-          :groups="filteredGroups" 
-          placeholder="Search countries, categories, or years..." 
-          @update:model-value="onSelect"
-          :fuse="{ fuseOptions: { threshold: 0.3, keys: ['label'] } }"
-          class="rounded-xl shadow-md bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm border border-zinc-300 dark:border-zinc-600 overflow-hidden"
-        >
-          <template #empty-state>
-            <div v-if="searchQuery" class="flex items-center justify-center py-6 text-sm text-zinc-500 dark:text-zinc-400">
-              No results found.
-            </div>
-          </template>
-        </UCommandPalette>
-      </div>
+      <SearchBar ref="searchBar" />
 
       <button @click="router.push('/global')"
         class="flex items-center justify-center px-4 h-[44px] rounded-xl shadow-sm border border-zinc-300 hover:border-zinc-500 dark:border-zinc-600 hover:dark:border-zinc-400 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm text-zinc-700 dark:text-zinc-200 font-medium transition-all whitespace-nowrap">
@@ -73,58 +58,16 @@
 </template>
 
 <script setup lang="ts">
-import { SEARCH_ITEMS, CATEGORIES } from '~/utils/dummyData'
+import { CATEGORIES } from '~/utils/dummyData'
 
 definePageMeta({ layout: 'canvas' })
 
 const router = useRouter()
 const { showImports, showExports, metric, selectedCategory, showFlows } = useTradeState()
 
-const searchQuery = ref('') // Tracks what you type in the bar
+const searchBar = ref()
 
-// Define your groups as a static array first
-const allGroups = [
-  {
-    id: 'countries',
-    label: 'Countries',
-    commands: SEARCH_ITEMS.filter(i => i.type === 'country').map(i => ({ id: i.path, label: i.label, path: i.path, icon: 'i-heroicons-globe-alt' }))
-  },
-  {
-    id: 'categories',
-    label: 'Categories',
-    commands: SEARCH_ITEMS.filter(i => i.type === 'category').map(i => ({ id: i.path, label: i.label, path: i.path, icon: 'i-heroicons-tag' }))
-  },
-  {
-    id: 'years',
-    label: 'Years',
-    commands: SEARCH_ITEMS.filter(i => i.type === 'year').map(i => ({ id: i.path, label: i.label, path: i.path, icon: 'i-heroicons-calendar' }))
-  }
-]
-
-// Only show the list if the user has typed something
-const filteredGroups = computed(() => {
-  if (!searchQuery.value) return []
-  return allGroups
-})
-
-// Handle what happens when an item is clicked/selected
-const onSelect = (item: any) => {
-  if (item && item.path) {
-    router.push(item.path)
-    searchQuery.value = '' // Clear the input field to collapse the menu
-    
-    // Unfocus the input so the mobile keyboard goes away
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
-    }
-  }
-}
-
-// Keep the Cmd+K shortcut, but use it to focus our new merged input
 defineShortcuts({
-  meta_k: () => {
-    const input = document.querySelector('input[placeholder="Search countries, categories, or years..."]') as HTMLInputElement
-    if (input) input.focus()
-  }
+  meta_k: () => searchBar.value?.focus()
 })
 </script>
