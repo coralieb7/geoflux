@@ -25,18 +25,18 @@
         <YearSlider v-model="selectedYear" />
       </StatCard>
 
-      <!-- Growth since 1988 -->
+      <!-- 10-Year trend -->
       <StatCard
-        title="Growth Since 1988"
-        :value="formatGrowth(growthSince1988)"
-        :color="growthSince1988 >= 0 ? 'green' : 'red'"
-        subtitle="Base year: 1988"
+        title="10-Year Trend"
+        :value="compareData.exports.usd === 0 ? 'N/A' : formatGrowth(trendGrowth)"
+        :color="compareData.exports.usd === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
+        :subtitle="`Compared to ${actualCompareYear}`"
         expandable
         clickable
       >
         <YearSlider v-model="selectedYear" />
         <p class="text-xs text-zinc-500 mt-2">
-          From {{ formatUsd(series.at(0)?.exports.usd ?? 0) }} in 1988 to {{ formatUsd(selectedYearData.exports.usd) }} in {{ selectedYear }}
+          From {{ formatUsd(compareData.exports.usd) }} in {{ actualCompareYear }} to {{ formatUsd(selectedYearData.exports.usd) }} in {{ selectedYear }}
         </p>
       </StatCard>
 
@@ -116,8 +116,16 @@ const series = computed(() => getCountryYearlySeries(c.value))
 const selectedYear     = ref(YEARS.at(-1) ?? 2016)
 const selectedYearData = computed(() => series.value.find(p => p.year === selectedYear.value) ?? series.value.at(-1)!)
 
-const growthSince1988 = computed(() => {
-  const base    = series.value.at(0)?.exports.usd ?? 0
+// 10-Year Trend logic
+const targetCompareYear = computed(() => Math.max(1988, selectedYear.value - 10))
+const compareData = computed(() => {
+  const past = series.value.filter(p => p.year <= targetCompareYear.value)
+  return past.length ? past.at(-1)! : series.value.at(0)!
+})
+const actualCompareYear = computed(() => compareData.value.year)
+
+const trendGrowth = computed(() => {
+  const base = compareData.value.exports.usd
   const current = selectedYearData.value.exports.usd
   return base === 0 ? 0 : ((current - base) / base) * 100
 })
