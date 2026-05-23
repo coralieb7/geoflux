@@ -141,7 +141,7 @@ onMounted(async () => {
       source: 'countries',
       paint: {
         'fill-color': '#333333',
-        'fill-opacity': 0.,
+        'fill-opacity': 0.8,
         'fill-outline-color': isDark.value ? '#111' : '#fff'
       }
     }, 'waterway-label')
@@ -266,10 +266,9 @@ const updateMapVisuals = () => {
   // Calculate Country Colors based on dummy data
   // We construct a Mapbox expression: ['match', ['get', 'iso3'], 'USA', 'rgb(x,y,z)', 'CHN', 'rgb(a,b,c)', ... , '#333']
   const colorExpression: any[] = ['match', ['get', 'ISO3166-1-Alpha-3']]
-
   let maxValue = 0
-  
-  // First, find max value for relative coloring
+
+  // 1. Find the highest value so we can calculate percentages
   TRADE_DATA.forEach(country => {
     let val = 0
     if (showImports.value) val += getTradeValue(country, 'imports', metric.value, selectedCategory.value)
@@ -283,24 +282,27 @@ const updateMapVisuals = () => {
     return
   }
 
-  // Generate color expression array
+  // 2. Determine gradient type
+  let gradientType: 'imports' | 'exports' | 'both' = 'imports'
+  if (showImports.value && showExports.value) gradientType = 'both'
+  else if (showExports.value) gradientType = 'exports'
+
+  // 3. Generate color mapping for Mapbox
   TRADE_DATA.forEach(country => {
     let val = 0
     if (showImports.value) val += getTradeValue(country, 'imports', metric.value, selectedCategory.value)
     if (showExports.value) val += getTradeValue(country, 'exports', metric.value, selectedCategory.value)
-    
-    // Determine gradient type: if both are clicked, fallback to 'imports' logic for now (you can blend this later)
-    const gradientType = showExports.value && !showImports.value ? 'exports' : 'imports'
-    
+
     if (val > 0) {
       colorExpression.push(country.iso3.toUpperCase())
       colorExpression.push(valueToColor(val, maxValue, gradientType))
     }
   })
 
-  colorExpression.push(isDark.value ? '#27272a' : '#f4f4f5') // Fallback color
+  // 4. Fallback color for countries with no data
+  colorExpression.push(isDark.value ? '#27272a' : '#f4f4f5')
 
-  // Apply to layer
+  // Apply to Mapbox layer
   canvas.setPaintProperty('country-fills', 'fill-color', colorExpression as any)
 }
 
