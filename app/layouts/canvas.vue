@@ -376,17 +376,31 @@ const setupInteractions = () => {
     if (route.path !== '/') return
     if (!e.features || e.features.length === 0) return
 
+    const props = e.features[0]?.properties
+    // Get the ISO3 code from the GeoJSON feature properties
+    const iso3 = props ? (props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3) : null
+    // Check if we actually have data for this country
+    const hasData = iso3 ? TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3.toUpperCase()) : false
+
+    // Clear previous hover state if any
     if (hoveredId !== null) {
       canvas.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
     }
-    hoveredId = e.features[0]?.id ?? null
-    if (hoveredId !== null) {
-      canvas.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
-    }
-    canvas.getCanvas().style.cursor = 'pointer'
 
-    const props = e.features[0]?.properties
-    if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
+    // Only apply hover interactions if we have data for the country
+    if (hasData) {
+      hoveredId = e.features[0]?.id ?? null
+      if (hoveredId !== null) {
+        canvas.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
+      }
+      canvas.getCanvas().style.cursor = 'pointer'
+
+      if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
+    } else {
+      hoveredId = null
+      canvas.getCanvas().style.cursor = ''
+      clearTradeConnections()
+    }
   })
 
   canvas.on('mouseleave', 'country-fills', () => {
@@ -403,9 +417,14 @@ const setupInteractions = () => {
     if (!e.features || e.features.length === 0) return
     const properties = e.features[0]?.properties
     if (!properties) return
+
     const iso3 = properties['ISO3166-1-Alpha-3'] || properties.iso3 || properties.ISO_A3
+    // Only navigate if the country exists in TRADE_DATA
     if (iso3) {
-      router.push(`/countries/${iso3.toLowerCase()}`)
+      const hasData = TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3.toUpperCase())
+      if (hasData) {
+        router.push(`/countries/${iso3.toLowerCase()}`)
+      }
     }
   })
 }
