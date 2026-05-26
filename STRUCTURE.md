@@ -1,6 +1,6 @@
 ## App Architecture
 
-The app is a Nuxt 3 SPA built around a full-screen Mapbox 3D globe (`layouts/canvas.vue`). Clicking a country or using the search palette opens detail pages that slide over the globe via `PageWindow.vue`. All data comes from pre-generated JSON files in `utils/generated/`.
+The app is a Nuxt 4 SPA built around a full-screen Mapbox 3D globe (`layouts/canvas.vue`). Clicking a country or using the search bar opens detail pages that slide over the globe via `PageWindow.vue`. All data comes from pre-generated JSON files in `utils/generated/`.
 
 ---
 
@@ -11,11 +11,11 @@ app/
 ├── app.vue                          # Root layout provider
 ├── assets/css/main.css              # Tailwind + Nuxt UI styles
 ├── layouts/
-│   └── canvas.vue                   # Full-screen Mapbox globe layout
+│   └── canvas.vue                   # Full-screen Mapbox globe; owns map init, interaction wiring, visuals
 ├── middleware/
 │   └── validateSlug.ts              # Route guard for all dynamic routes
 ├── pages/
-│   ├── index.vue                    # Home: globe + map controls + search
+│   ├── index.vue                    # Home: globe + map controls + SearchBar
 │   ├── global.vue                   # World-level trade dashboard
 │   ├── years/[slug].vue             # Year snapshot (/years/2016)
 │   ├── countries/[slug].vue         # Country overview (/countries/usa)
@@ -25,7 +25,8 @@ app/
 │   └── commodities/[slug].vue       # Single commodity detail
 ├── components/
 │   ├── PageWindow.vue               # Modal-like wrapper for all detail pages
-│   ├── SearchBar.vue                # Search palette (countries, categories, commodities, years)
+│   ├── SearchBar.vue                # Search-as-you-type bar (countries, categories, commodities, years)
+│   ├── MapLegend.vue                # Trade connection colour legend (export / import / both)
 │   ├── StatCard.vue                 # Stat display tile with optional expand
 │   ├── YearSlider.vue               # Year range slider (1988–2016)
 │   └── d3/
@@ -34,10 +35,12 @@ app/
 │       └── PieChart.vue             # Donut chart
 ├── composables/
 │   ├── useTradeState.ts             # Shared map control state (toggles, metric, category)
+│   ├── useTradeConnections.ts       # Trade connection renderer — clear / update / show-all on the map
 │   └── useNavHistory.ts             # Breadcrumb navigation stack
 └── utils/
     ├── dummyData.ts                 # Loads countries.json + years.json; exports helpers & search index
     ├── tradeExtended.ts             # Loads commodities.json + categories.json; exports lookup helpers
+    ├── tradeConnectionUtils.ts      # Pure geometry + lookup helpers (great-circle arc, centroids, GeoJSON builders)
     ├── formatters.ts                # Currency/weight formatters + slug converters
     └── generated/
         ├── countries.json
@@ -97,7 +100,14 @@ Reusable stat tile used throughout detail pages.
 ---
 
 #### `SearchBar.vue`
-Search-as-you-type palette with keyboard navigation. Results are grouped into Countries, Categories, Commodities, and Years. Navigates via `useRouter().push()` on selection.
+Search-as-you-type input rendered at the top of the globe. Results are grouped into Countries, Categories, Commodities, and Years. Supports keyboard navigation (↑ ↓ Enter Escape) and highlights the matched substring. Navigates via `useRouter().push()` on selection and clears on dismiss. Exposed `focus()` method lets the parent wire up the ⌘K shortcut.
+
+---
+
+#### `MapLegend.vue`
+Small overlay shown in the bottom-left of the globe whenever trade connections are visible (on country hover or when "Trade Flows" is toggled). Lists the three connection colours: export destination (orange), import source (blue), both (purple). Fades in/out via a Vue `<Transition>`.
+
+**Props:** `visible: boolean`
 
 ---
 
@@ -137,6 +147,19 @@ Shared reactive state for the globe map controls. Read by `canvas.vue` to update
 
 ---
 
+#### `useTradeConnections.ts`
+Manages the two dynamic Mapbox sources (`trade-connection-lines`, `trade-connection-dots`) that visualise trade partner connections. Accepts a `getMap` getter so it can be initialised before the map is ready.
+
+| Export | Description |
+|--------|-------------|
+| `clearTradeConnections()` | Empties both sources |
+| `updateTradeConnections(geoName, iso3)` | Draws arcs + dots for the hovered country's top 3 partners (2016 data) |
+| `showAllTradeConnections()` | Draws all partner connections for every country simultaneously |
+
+Depends on `tradeConnectionUtils.ts` for geometry and data lookup.
+
+---
+
 #### `useNavHistory.ts`
 Breadcrumb stack for detail page navigation. `PageWindow.vue` reads the stack to render the trail; pages call `push()` to navigate while preserving history.
 
@@ -154,13 +177,14 @@ Breadcrumb stack for detail page navigation. `PageWindow.vue` reads the stack to
 #### `dummyData.ts`
 Loads `countries.json` and `years.json`. Main exports:
 - `TRADE_DATA` — all country objects
+- `TRADE_CONNECTIONS` — per-country top-3 import/export partners keyed by ISO3 → year
 - `CATEGORIES` — unique category name list
 - `YEARS` — available year list
 - `SEARCH_ITEMS` — flattened search index (countries + categories + years)
 - `getCountry(iso3)` — country lookup
+- `getTradeConnections(iso3, year)` — partner data for a given country + year
 - `getTradeValue(country, type, metric, category)` — single value accessor
-- `valueToColor(value, max, type)` — RGB color for map choropleth (blue = imports, orange = exports)
-- `TRADE_FLOWS` — top 10 country-to-country export connections (used for globe arc layer)
+- `valueToColor(value, max, type)` — RGB colour for map choropleth (blue = imports, orange = exports)
 
 #### `tradeExtended.ts`
 Loads `commodities.json` and `categories.json`. Main exports:
@@ -171,6 +195,15 @@ Loads `commodities.json` and `categories.json`. Main exports:
 - `getCategoryYearlySeries(category)` — yearly points for a category
 - `getCommodityYearlySeries(commodity)` — yearly points for a commodity
 - `getYearSnapshot(year)` — full year aggregate (totals, top 5 categories/countries, historical note)
+
+#### `tradeConnectionUtils.ts`
+Pure, map-agnostic helpers used by `useTradeConnections`. No Vue reactivity — safe to import anywhere.
+- `CENTROIDS` — hardcoded accurate centroids for countries with bad GeoJSON lat/lng (FRA, USA)
+- `getCountryLngLat(iso3)` — resolves `[lng, lat]` for a country, preferring `CENTROIDS`
+- `getPartnerLngLat(iso3)` — like above but also handles special codes (`WLD`, `EUU`)
+- `resolveConnectionKey(geoName, iso3)` — finds the key in `TRADE_CONNECTIONS` for a hovered feature
+- `greatCircleArc(from, to, steps?)` — spherical interpolation returning `[lng, lat][]`; unwraps antimeridian jumps
+- `buildConnectionFeatures(hLngLat, importers, exporters)` — returns `{ lines, dots }` GeoJSON features for a country's partner set
 
 #### `formatters.ts`
 - `formatUsd(value)` — millions → `$3.20T` / `$450B` / `$12M`
@@ -187,11 +220,17 @@ Loads `commodities.json` and `categories.json`. Main exports:
 ```
 utils/generated/*.json
         │
-        ├── dummyData.ts  ──► TRADE_DATA, SEARCH_ITEMS, TRADE_FLOWS
-        └── tradeExtended.ts ► COMMODITIES, year/category/commodity series
+        ├── dummyData.ts       ──► TRADE_DATA, TRADE_CONNECTIONS, SEARCH_ITEMS
+        └── tradeExtended.ts   ──► COMMODITIES, year/category/commodity series
 
-useTradeState.ts ◄──► index.vue (controls) + canvas.vue (globe rendering)
-useNavHistory.ts ◄──► PageWindow.vue (breadcrumbs) + all detail pages (push/back)
+tradeConnectionUtils.ts  (pure geometry + GeoJSON builders)
+        └── useTradeConnections.ts  ──► canvas.vue (renders arc layers on the Mapbox map)
+
+useTradeState.ts  ◄──►  index.vue (controls)  +  canvas.vue (globe colour rendering)
+useNavHistory.ts  ◄──►  PageWindow.vue (breadcrumbs)  +  all detail pages (push/back)
+
+SearchBar.vue  ──►  index.vue (rendered at top of globe, searches all four entity types)
+MapLegend.vue  ──►  canvas.vue (shown when trade connections are visible)
 ```
 
 All pages are client-side computed — there is no server-side API. Every stat (growth, world share, top N) is derived at runtime from the pre-generated JSON.
