@@ -127,6 +127,17 @@ function setupInteractions(m: mapboxgl.Map) {
   })
 }
 
+// ─── Reactive watchers (top-level so they fire correctly across layout/page) ──
+
+watch([showImports, showExports, metric, selectedCategory], () => {
+  if (map?.isStyleLoaded()) updateMapVisuals()
+})
+
+watch(showFlows, (val) => {
+  if (!map?.isStyleLoaded()) return
+  val ? showAllTradeConnections() : clearTradeConnections()
+})
+
 // ─── Map initialisation ───────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -200,16 +211,6 @@ onMounted(async () => {
 
     setupInteractions(m)
     updateMapVisuals()
-  })
-
-  // Reactivity
-  watch([showImports, showExports, metric, selectedCategory], () => {
-    if (m.isStyleLoaded()) updateMapVisuals()
-  })
-
-  watch(showFlows, (val) => {
-    if (!m.isStyleLoaded()) return
-    val ? showAllTradeConnections() : clearTradeConnections()
   })
 
   watch(() => route.path, (path) => {

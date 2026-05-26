@@ -34,10 +34,25 @@
         </button>
       </div>
 
-      <USelectMenu v-model="selectedCategory" :options="CATEGORIES" placeholder="All Categories" 
-        class="w-full shadow-sm backdrop-blur-sm bg-white/90 dark:bg-zinc-900/90 rounded-md"
-        clear-search-on-close>
-      </USelectMenu>
+      <div class="relative w-full">
+        <UIcon
+          name="i-heroicons-magnifying-glass"
+          class="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400 pointer-events-none z-10"
+        />
+        <USelectMenu
+          v-model="selectedCategory"
+          :items="CATEGORIES"
+          placeholder="Search categories..."
+          class="w-full shadow-sm backdrop-blur-sm bg-white/90 dark:bg-zinc-900/90 rounded-xl border border-zinc-300 dark:border-zinc-600 pl-8"
+        />
+        <button
+          v-if="selectedCategory"
+          @click="selectedCategory = null"
+          class="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 z-10 transition-colors"
+        >
+          <UIcon name="i-heroicons-x-mark" class="size-4" />
+        </button>
+      </div>
 
       <button @click="showFlows = !showFlows"
         :class="['px-4 py-2 rounded-lg shadow-sm border font-medium transition-all text-left mt-4 flex justify-between items-center', showFlows ? 'bg-purple-100 dark:bg-purple-900 border-purple-400 text-purple-800 dark:text-purple-100' : 'bg-white/90 dark:bg-zinc-900/90 border-zinc-300 dark:border-zinc-600 text-zinc-700 dark:text-zinc-300 backdrop-blur-sm']">
