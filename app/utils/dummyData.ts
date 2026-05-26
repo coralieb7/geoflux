@@ -82,18 +82,30 @@ export function getTradeValue(
   return country[type][metric]
 }
 
-export function valueToColor(value: number, max: number, type: 'imports' | 'exports'): string {
-  if (max === 0) return '#1a1a2e'
-  const t = Math.min(value / max, 1)
+export function valueToColor(value: number, max: number, type: 'imports' | 'exports' | 'both'): string {
+  if (max === 0 || value === 0) return 'rgba(0,0,0,0)' // Transparent if no data
+
+  // A power scale (0.35) compresses the massive gap between China/US
+  // and the rest of the world, which makes for a smoother gradient.
+  const t = Math.pow(value / max, 0.35)
+
   if (type === 'imports') {
-    const r = Math.round(20  + (10  - 20)  * t)
-    const g = Math.round(60  + (100 - 60)  * t)
-    const b = Math.round(160 + (255 - 160) * t)
+    // Light Blue to Deep Blue
+    const r = Math.round(219 + (29  - 219) * t)
+    const g = Math.round(234 + (78  - 234) * t)
+    const b = Math.round(254 + (216 - 254) * t)
+    return `rgb(${r},${g},${b})`
+  } else if (type === 'exports') {
+    // Light Orange to Deep Orange
+    const r = Math.round(255 + (194 - 255) * t)
+    const g = Math.round(237 + (65  - 237) * t)
+    const b = Math.round(213 + (12  - 213) * t)
     return `rgb(${r},${g},${b})`
   } else {
-    const r = Math.round(180 + (255 - 180) * t)
-    const g = Math.round(80  + (120 - 80)  * t)
-    const b = Math.round(20  + (0   - 20)  * t)
+    // Light Purple to Deep Purple (for total volume)
+    const r = Math.round(243 + (126 - 243) * t)
+    const g = Math.round(232 + (34  - 232) * t)
+    const b = Math.round(255 + (206 - 255) * t)
     return `rgb(${r},${g},${b})`
   }
 }

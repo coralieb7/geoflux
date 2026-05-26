@@ -59,12 +59,12 @@
         <YearSlider v-model="selectedYear" />
       </StatCard>
 
-      <!-- Growth since 1988 -->
+      <!-- 10-Year trend -->
       <StatCard
-        title="Growth Since 1988"
-        :value="formatGrowth(growthSince1988)"
-        :color="growthSince1988 >= 0 ? 'green' : 'red'"
-        subtitle="Base year: 1988"
+        title="10-Year Trend"
+        :value="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'N/A' : formatGrowth(trendGrowth)"
+        :color="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
+        :subtitle="`Compared to ${actualCompareYear}`"
         expandable
         clickable
       >
@@ -83,10 +83,10 @@
       </StatCard>
 
       <!-- Evolution chart -->
-      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
+      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5 min-h-100 flex flex-col">
         <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Evolution Over Time</h3>
-        <div class="h-64 w-full bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-          <D3LineChart :series="evolutionSeries" :format-y="formatUsd" y-label="USD (M)" />
+        <div class="h-64 flex-1 w-full flex flex-col bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+          <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
         </div>
       </div>
 
@@ -119,9 +119,16 @@ const selectedYear     = ref(YEARS.at(-1) ?? 2016)
 const selectedYearData = computed(() => series.value.find(p => p.year === selectedYear.value) ?? series.value.at(-1)!)
 const catYearData      = computed(() => catSeries.value.find(p => p.year === selectedYear.value) ?? catSeries.value.at(-1)!)
 
-const growthSince1988 = computed(() => {
-  const first   = series.value.at(0)
-  const base    = (first?.imports.usd ?? 0) + (first?.exports.usd ?? 0)
+// 10-Year Trend logic
+const targetCompareYear = computed(() => Math.max(1988, selectedYear.value - 10))
+const compareData = computed(() => {
+  const past = series.value.filter(p => p.year <= targetCompareYear.value)
+  return past.length ? past.at(-1)! : series.value.at(0)!
+})
+const actualCompareYear = computed(() => compareData.value.year)
+
+const trendGrowth = computed(() => {
+  const base = compareData.value.imports.usd + compareData.value.exports.usd
   const current = selectedYearData.value.imports.usd + selectedYearData.value.exports.usd
   return base === 0 ? 0 : ((current - base) / base) * 100
 })

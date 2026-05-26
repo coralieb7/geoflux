@@ -25,18 +25,18 @@
         <YearSlider v-model="selectedYear" />
       </StatCard>
 
-      <!-- Growth since 1988 -->
+      <!-- 10-Year trend -->
       <StatCard
-        title="Growth Since 1988"
-        :value="formatGrowth(growthSince1988)"
-        :color="growthSince1988 >= 0 ? 'green' : 'red'"
-        subtitle="Base year: 1988"
+        title="10-Year Trend"
+        :value="compareData.exports.usd === 0 ? 'N/A' : formatGrowth(trendGrowth)"
+        :color="compareData.exports.usd === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
+        :subtitle="`Compared to ${actualCompareYear}`"
         expandable
         clickable
       >
         <YearSlider v-model="selectedYear" />
         <p class="text-xs text-zinc-500 mt-2">
-          From {{ formatUsd(series.at(0)?.exports.usd ?? 0) }} in 1988 to {{ formatUsd(selectedYearData.exports.usd) }} in {{ selectedYear }}
+          From {{ formatUsd(compareData.exports.usd) }} in {{ actualCompareYear }} to {{ formatUsd(selectedYearData.exports.usd) }} in {{ selectedYear }}
         </p>
       </StatCard>
 
@@ -76,16 +76,15 @@
       </StatCard>
 
       <!-- Evolution chart -->
-      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
+      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5 min-h-100 flex flex-col">
         <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Export Evolution (1988–2023)</h3>
-        <div class="h-64 w-full bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-          <D3LineChart
+        <div class="h-64 flex-1 w-full flex flex-col bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
+          <D3BarChartRace
             :series="[
               { id: 'exports', label: 'Exports (USD)',    color: '#f97316', data: usdSeries },
               { id: 'weight',  label: 'Exports (weight)', color: '#a855f7', data: weightSeries },
             ]"
-            :format-y="formatUsd"
-            y-label="USD (M)"
+            :format-value="formatUsd"
           />
         </div>
       </div>
@@ -116,8 +115,16 @@ const series = computed(() => getCountryYearlySeries(c.value))
 const selectedYear     = ref(YEARS.at(-1) ?? 2016)
 const selectedYearData = computed(() => series.value.find(p => p.year === selectedYear.value) ?? series.value.at(-1)!)
 
-const growthSince1988 = computed(() => {
-  const base    = series.value.at(0)?.exports.usd ?? 0
+// 10-Year Trend logic
+const targetCompareYear = computed(() => Math.max(1988, selectedYear.value - 10))
+const compareData = computed(() => {
+  const past = series.value.filter(p => p.year <= targetCompareYear.value)
+  return past.length ? past.at(-1)! : series.value.at(0)!
+})
+const actualCompareYear = computed(() => compareData.value.year)
+
+const trendGrowth = computed(() => {
+  const base = compareData.value.exports.usd
   const current = selectedYearData.value.exports.usd
   return base === 0 ? 0 : ((current - base) / base) * 100
 })

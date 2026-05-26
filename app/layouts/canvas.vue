@@ -52,11 +52,14 @@ function updateMapVisuals() {
     return
   }
 
+  let gradientType: 'imports' | 'exports' | 'both' = 'imports'
+  if (showImports.value && showExports.value) gradientType = 'both'
+  else if (showExports.value) gradientType = 'exports'
+
   TRADE_DATA.forEach(country => {
     let val = 0
     if (showImports.value) val += getTradeValue(country, 'imports', metric.value, selectedCategory.value)
     if (showExports.value) val += getTradeValue(country, 'exports', metric.value, selectedCategory.value)
-    const gradientType = showExports.value && !showImports.value ? 'exports' : 'imports'
     if (val > 0) {
       colorExpression.push(country.iso3.toUpperCase())
       colorExpression.push(valueToColor(val, maxValue, gradientType))
@@ -76,15 +79,28 @@ function setupInteractions(m: mapboxgl.Map) {
     if (route.path !== '/') return
     if (!e.features?.length) return
 
-    if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
-    hoveredId = e.features[0]?.id ?? null
-    if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
-    m.getCanvas().style.cursor = 'pointer'
+    const props = e.features[0]?.properties
+    const iso3 = props ? (props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3) : null
+    const hasData = iso3 ? TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3.toUpperCase()) : false
 
-    if (!showFlows.value) {
-      isHovering.value = true
-      const props = e.features[0]?.properties
-      if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
+    if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
+
+    if (hasData) {
+      hoveredId = e.features[0]?.id ?? null
+      if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
+      m.getCanvas().style.cursor = 'pointer'
+
+      if (!showFlows.value) {
+        isHovering.value = true
+        if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
+      }
+    } else {
+      hoveredId = null
+      m.getCanvas().style.cursor = ''
+      if (!showFlows.value) {
+        isHovering.value = false
+        clearTradeConnections()
+      }
     }
   })
 
@@ -104,7 +120,10 @@ function setupInteractions(m: mapboxgl.Map) {
     const props = e.features[0]?.properties
     if (!props) return
     const iso3 = props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3
-    if (iso3) router.push(`/countries/${iso3.toLowerCase()}`)
+    if (iso3) {
+      const hasData = TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3.toUpperCase())
+      if (hasData) router.push(`/countries/${iso3.toLowerCase()}`)
+    }
   })
 }
 
@@ -134,7 +153,7 @@ onMounted(async () => {
       source: 'countries',
       paint: {
         'fill-color': '#333333',
-        'fill-opacity': 0,
+        'fill-opacity': 0.8,
         'fill-outline-color': isDark.value ? '#111' : '#fff',
       },
     }, 'waterway-label')

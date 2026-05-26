@@ -80,16 +80,14 @@
           </div>
         </div>
 
-        <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-6 min-h-[350px] flex flex-col">
-          <h2 class="text-lg font-semibold text-zinc-600 dark:text-zinc-300 mb-4">Evolution Over Time (1988 - 2023)</h2>
-          
-          <div class="flex-1 w-full bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4 relative overflow-hidden">
-            <div class="absolute inset-0 flex items-center justify-center text-zinc-400 border-2 border-dashed border-zinc-300 dark:border-zinc-700 m-4 rounded-lg">
-              [ D3 Evolution Chart Placeholder ]
-            </div>
+        <!-- Evolution Over Time -->
+        <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-6 min-h-137.5 flex flex-col">
+          <h2 class="text-lg font-semibold text-zinc-600 dark:text-zinc-300 mb-4">Total Trade per Country Over Time (1988 - 2016)</h2>
+
+          <div class="flex-1 w-full flex flex-col bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4 relative overflow-hidden">
+            <D3BarChartRace :series="topCountriesSeries" :format-value="formatCurrency" />
           </div>
         </div>
-
       </div>
     </div>
   </div>
@@ -149,4 +147,33 @@ const topCategories = computed(() => {
     .sort((a, b) => b.total - a.total)
     .slice(0, 8)
 })
+
+const CATEGORY_COLORS = [
+  '#3b82f6','#f97316','#22c55e','#a855f7','#eab308',
+  '#06b6d4','#ec4899','#f43f5e','#10b981','#8b5cf6'
+]
+
+// Generates a stable color for a country based on its ISO3 code
+function getCountryColor(iso3: string) {
+  let hash = 0
+  for (let i = 0; i < iso3.length; i++) {
+    hash = iso3.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return CATEGORY_COLORS[Math.abs(hash) % CATEGORY_COLORS.length]
+}
+
+const topCountriesSeries = computed(() => {
+  // Feed all countries into the chart. The BarChartRace component will mathematically
+  // determine the Top 10 for whatever year the slider is currently on.
+  return TRADE_DATA.map(c => ({
+    id: c.iso3,
+    label: c.name,
+    color: getCountryColor(c.iso3),
+    data: c.series.map(s => ({
+      year: s.year,
+      value: s.imports.usd + s.exports.usd
+    }))
+  }))
+})
+
 </script>
