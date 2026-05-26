@@ -1,28 +1,14 @@
-import type { Ref } from 'vue'
 import { TRADE_DATA, TRADE_CONNECTIONS } from '~/utils/dummyData'
 import {
   CENTROIDS,
   getCountryLngLat,
-  getPartnerLngLat,
   resolveConnectionKey,
   buildConnectionFeatures,
 } from '~/utils/tradeConnectionUtils'
 
-interface Deps {
-  route:     ReturnType<typeof useRoute>
-  router:    ReturnType<typeof useRouter>
-  showFlows: Ref<boolean>
-}
-
-export function useTradeConnections(deps: Deps) {
-  const isHovering = ref(false)
-  let hoveredId: number | string | null = null
-  // Stored when setupInteractions is called; avoids a cross-file type conflict
-  // with mapboxgl's Map declaration.
-  let map: any = null
-
+export function useTradeConnections(getMap: () => any) {
   function setSource(id: string, features: GeoJSON.Feature[]) {
-    map?.getSource(id)?.setData({ type: 'FeatureCollection', features })
+    getMap()?.getSource(id)?.setData({ type: 'FeatureCollection', features })
   }
 
   function clearTradeConnections() {
@@ -77,57 +63,5 @@ export function useTradeConnections(deps: Deps) {
     setSource('trade-connection-dots',  dots)
   }
 
-  // Wires up all map event listeners. Call once inside the map 'load' handler.
-  function setupInteractions(mapInstance: any) {
-    map = mapInstance
-
-    map.on('mousemove', 'country-fills', (e: any) => {
-      if (deps.route.path !== '/') return
-      if (!e.features?.length) return
-
-      if (hoveredId !== null) {
-        map.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
-      }
-      hoveredId = e.features[0]?.id ?? null
-      if (hoveredId !== null) {
-        map.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
-      }
-      map.getCanvas().style.cursor = 'pointer'
-
-      if (!deps.showFlows.value) {
-        isHovering.value = true
-        const props = e.features[0]?.properties
-        if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
-      }
-    })
-
-    map.on('mouseleave', 'country-fills', () => {
-      if (hoveredId !== null) {
-        map.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
-      }
-      hoveredId = null
-      map.getCanvas().style.cursor = ''
-
-      if (!deps.showFlows.value) {
-        isHovering.value = false
-        clearTradeConnections()
-      }
-    })
-
-    map.on('click', 'country-fills', (e: any) => {
-      if (deps.route.path !== '/') return
-      if (!e.features?.length) return
-      const props = e.features[0]?.properties
-      if (!props) return
-      const iso3 = props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3
-      if (iso3) deps.router.push(`/countries/${iso3.toLowerCase()}`)
-    })
-  }
-
-  return {
-    isHovering,
-    clearTradeConnections,
-    showAllTradeConnections,
-    setupInteractions,
-  }
+  return { clearTradeConnections, showAllTradeConnections, updateTradeConnections }
 }

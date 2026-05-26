@@ -32,12 +32,6 @@ export interface TradeConnectionYear {
   top3importers: Record<string, number>
 }
 
-export interface TradeFlow {
-  fromIso3: string; fromLat: number; fromLng: number
-  toIso3: string;   toLat: number;   toLng: number
-  usd: number; weight: number; type: 'export' | 'import'
-}
-
 export interface SearchItem {
   type: 'country' | 'category' | 'year'
   label: string
@@ -103,26 +97,6 @@ export function valueToColor(value: number, max: number, type: 'imports' | 'expo
     return `rgb(${r},${g},${b})`
   }
 }
-
-// ─── Trade flows (kept for globe arrows — uses top countries from real data) ─
-export const TRADE_FLOWS: TradeFlow[] = (() => {
-  const top = TRADE_DATA.slice(0, 10)
-  const flows: TradeFlow[] = []
-  for (let i = 0; i < Math.min(top.length, 5); i++) {
-    for (let j = i + 1; j < Math.min(top.length, 6); j++) {
-      const a = top[i]!
-      const b = top[j]!
-      flows.push({
-        fromIso3: a.iso3, fromLat: a.lat, fromLng: a.lng,
-        toIso3:   b.iso3, toLat:   b.lat, toLng:   b.lng,
-        usd: Math.round((a.exports.usd + b.imports.usd) / 2),
-        weight: 0,
-        type: 'export',
-      })
-    }
-  }
-  return flows
-})()
 
 // ─── Search index ──────────────────────────────────────────────────────────
 

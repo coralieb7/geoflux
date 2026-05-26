@@ -13,7 +13,7 @@
 <script setup lang="ts">
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { TRADE_DATA, TRADE_FLOWS, getTradeValue, valueToColor } from '~/utils/dummyData'
+import { TRADE_DATA, getTradeValue, valueToColor } from '~/utils/dummyData'
 
 const config    = useRuntimeConfig()
 const router    = useRouter()
@@ -26,8 +26,10 @@ const { showImports, showExports, metric, selectedCategory, showFlows } = useTra
 const mapContainer = ref<HTMLElement | null>(null)
 let map: mapboxgl.Map | null = null
 
-const { isHovering, clearTradeConnections, showAllTradeConnections, setupInteractions } =
-  useTradeConnections({ route, router, showFlows })
+const isHovering = ref(false)
+
+const { clearTradeConnections, showAllTradeConnections, updateTradeConnections } =
+  useTradeConnections(() => map)
 
 // ─── Map visuals ──────────────────────────────────────────────────────────────
 
@@ -63,6 +65,47 @@ function updateMapVisuals() {
 
   colorExpression.push(isDark.value ? '#27272a' : '#f4f4f5')
   m.setPaintProperty('country-fills', 'fill-color', colorExpression as any)
+}
+
+// ─── Map interactions ─────────────────────────────────────────────────────────
+
+function setupInteractions(m: mapboxgl.Map) {
+  let hoveredId: number | string | null = null
+
+  m.on('mousemove', 'country-fills', (e) => {
+    if (route.path !== '/') return
+    if (!e.features?.length) return
+
+    if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
+    hoveredId = e.features[0]?.id ?? null
+    if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: true })
+    m.getCanvas().style.cursor = 'pointer'
+
+    if (!showFlows.value) {
+      isHovering.value = true
+      const props = e.features[0]?.properties
+      if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
+    }
+  })
+
+  m.on('mouseleave', 'country-fills', () => {
+    if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
+    hoveredId = null
+    m.getCanvas().style.cursor = ''
+    if (!showFlows.value) {
+      isHovering.value = false
+      clearTradeConnections()
+    }
+  })
+
+  m.on('click', 'country-fills', (e) => {
+    if (route.path !== '/') return
+    if (!e.features?.length) return
+    const props = e.features[0]?.properties
+    if (!props) return
+    const iso3 = props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3
+    if (iso3) router.push(`/countries/${iso3.toLowerCase()}`)
+  })
 }
 
 // ─── Map initialisation ───────────────────────────────────────────────────────
@@ -104,31 +147,6 @@ onMounted(async () => {
         'fill-opacity': ['case', ['boolean', ['feature-state', 'hover'], false], 0.18, 0],
       },
     }, 'waterway-label')
-
-    // Static trade-flow lines (decorative, hidden by default)
-    m.addSource('flows', {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: TRADE_FLOWS.map((flow, idx) => ({
-          type: 'Feature',
-          id: idx,
-          geometry: { type: 'LineString', coordinates: [[flow.fromLng, flow.fromLat], [flow.toLng, flow.toLat]] },
-          properties: { weight: flow.weight, usd: flow.usd },
-        })) as any,
-      },
-    })
-    m.addLayer({
-      id: 'flow-lines',
-      type: 'line',
-      source: 'flows',
-      layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: {
-        'line-color': '#a855f7',
-        'line-width': ['interpolate', ['linear'], ['get', 'usd'], 0, 1, 1_000_000, 4],
-        'line-opacity': 0,
-      },
-    })
 
     // Dynamic trade-connection layers (populated on hover / showFlows)
     const emptyFC = { type: 'FeatureCollection' as const, features: [] }
