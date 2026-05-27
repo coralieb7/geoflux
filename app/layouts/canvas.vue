@@ -61,7 +61,7 @@ const config = useRuntimeConfig()
 const router = useRouter()
 const route  = useRoute()
 
-const { showImports, showExports, metric, selectedCategory, showFlows, selectedYear } = useTradeState()
+const { showImports, showExports, metric, selectedCategory, showFlows, selectedYear, flyToRequest } = useTradeState()
 
 const mapContainer = ref<HTMLElement | null>(null)
 let map: mapboxgl.Map | null = null
@@ -355,6 +355,12 @@ watch(showFlows, (val) => {
 watch(selectedYear, () => {
   if (!mapReady) return
   if (showFlows.value) showAllTradeConnections(selectedYear.value)
+})
+
+watch(flyToRequest, (req) => {
+  if (!req || !map || !mapReady) return
+  map.flyTo({ center: req.center, zoom: req.zoom, duration: 1500, essential: true })
+  flyToRequest.value = null
 })
 
 // ─── Map initialisation ───────────────────────────────────────────────────────

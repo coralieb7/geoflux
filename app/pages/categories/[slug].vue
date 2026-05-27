@@ -219,7 +219,7 @@
             </button>
           </div>
           <div class="flex-1 min-h-0">
-            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" :hide-year-scrubber="true" />
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" :auto-play="true" :hide-year-scrubber="true" />
           </div>
         </div>
 

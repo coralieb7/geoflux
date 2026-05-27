@@ -165,7 +165,7 @@
           </div>
           <!-- Auto-looping preview in compact view -->
           <div class="flex-1 min-h-0">
-            <D3BarChartRace :series="topCountriesSeries" :format-value="formatUsd" :preview="true" />
+            <D3BarChartRace :series="topCountriesSeries" :format-value="formatUsd" :auto-play="true" :hide-year-scrubber="true" />
           </div>
         </div>
 

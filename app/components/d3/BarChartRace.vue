@@ -55,6 +55,7 @@ const props = defineProps<{
   formatValue?:      (v: number) => string
   maxLines?:         number   // max highlighted/labelled lines (default: all ≤6, else 10)
   preview?:          boolean  // auto-loops the animation; no controls shown
+  autoPlay?:         boolean  // starts animation once on mount; controls still shown
   hideYearScrubber?: boolean  // show play/reset but hide the range slider + year label
 }>()
 
@@ -169,8 +170,20 @@ onMounted(() => {
   }
   // Auto-start looping animation in preview mode
   if (props.preview) {
-    // Small delay so init() has had time to set up the SVG
     setTimeout(startPreviewLoop, 300)
+  } else if (props.autoPlay) {
+    setTimeout(() => {
+      progressPct.value = 0
+      isPlaying.value = true
+      timer = setInterval(() => {
+        const step = 100 / Math.max(1, allYears.value.length - 1)
+        if (progressPct.value < 100) {
+          progressPct.value = Math.min(100, progressPct.value + step)
+        } else {
+          pauseAnim()
+        }
+      }, TICK_MS)
+    }, 300)
   }
 })
 

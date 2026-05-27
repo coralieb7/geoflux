@@ -287,6 +287,7 @@
             <D3BarChartRace
               :series="evolutionSeries"
               :format-value="evoMetric === 'usd' ? formatUsd : formatWeight"
+              :auto-play="true"
               :hide-year-scrubber="true"
             />
           </div>
