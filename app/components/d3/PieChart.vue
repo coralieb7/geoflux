@@ -41,54 +41,63 @@ function draw() {
   const arc  = d3.arc<d3.PieArcDatum<PieSlice>>().innerRadius(radius * 0.45).outerRadius(radius)
   const hArc = d3.arc<d3.PieArcDatum<PieSlice>>().innerRadius(radius * 0.45).outerRadius(radius + 6)
 
-  // Create the tooltip div
+  // Tooltip
   const tooltip = d3.select(container.value)
     .append('div')
-    .attr('class', 'absolute pointer-events-none opacity-0 bg-zinc-800 dark:bg-zinc-100 text-white dark:text-zinc-900 text-xs px-2.5 py-1.5 rounded-md shadow-lg z-50 transition-opacity duration-150')
+    .attr('class', 'absolute pointer-events-none opacity-0 bg-[#020c1f]/95 border border-white/10 text-white/85 text-xs px-2.5 py-1.5 rounded-lg shadow-xl z-50 transition-opacity duration-150 whitespace-nowrap')
+
+  const pieData = pie(props.slices)
 
   const arcs = svg.selectAll('path')
-    .data(pie(props.slices))
+    .data(pieData)
     .join('path')
-    .attr('d', arc)
     .attr('fill', (d, i) => d.data.color ?? PALETTE[i % PALETTE.length])
-    .attr('stroke', 'white')
-    .attr('stroke-width', 2)
+    .attr('stroke', '#071828')
+    .attr('stroke-width', 1.5)
     .style('cursor', props.onSliceClick ? 'pointer' : 'default')
+    // Start each slice at zero width for the draw-in animation
+    .attr('d', d => arc({ ...d, endAngle: d.startAngle }) ?? '')
+    .attr('opacity', 0.85)
 
-  // Attach mouse events to ALL slices
+  // Draw-in animation: each slice sweeps from startAngle → endAngle
+  arcs.transition()
+    .duration(700)
+    .delay((_, i) => i * 55)
+    .ease(d3.easeCubicOut)
+    .attrTween('d', function(d) {
+      const interpolate = d3.interpolate(
+        { ...d, endAngle: d.startAngle },
+        d
+      )
+      return (t: number) => arc(interpolate(t)) as string
+    })
+
+  // Hover + tooltip
   arcs
     .on('mousemove', function(event, d) {
-      // Calculate percentage
       const pct = ((d.value / total) * 100).toFixed(1)
-      // Get mouse coordinates relative to the container
       const [x, y] = d3.pointer(event, container.value)
-
-      // Update tooltip content and position
       tooltip
-        .html(`${d.data.label} ${pct}%`)
+        .html(`<span class="font-semibold">${d.data.label}</span> <span class="text-[#93c5fd]">${pct}%</span>`)
         .style('left', `${x + 15}px`)
-        .style('top', `${y + 15}px`)
+        .style('top',  `${y + 15}px`)
         .style('opacity', 1)
-
-      // Enlarge slice
-      d3.select(this).attr('d', hArc as any).attr('opacity', 0.9)
+      d3.select(this).attr('d', hArc as any).attr('opacity', 1)
     })
     .on('mouseleave', function() {
-      // Hide tooltip and shrink slice back
       tooltip.style('opacity', 0)
-      d3.select(this).attr('d', arc as any).attr('opacity', 1)
+      d3.select(this).attr('d', arc as any).attr('opacity', 0.85)
     })
 
-  // 4. Attach click event if prop is provided
   if (props.onSliceClick) {
     arcs.on('click', (_, d) => props.onSliceClick!(d.data))
   }
 
-  // Centre label: total
+  // Centre labels: "Total" hint + formatted value
   svg.append('text').attr('text-anchor', 'middle').attr('dy', '-0.2em')
-    .attr('fill', '#71717a').attr('font-size', 11).text('Total')
+    .attr('fill', 'rgba(147,197,253,0.5)').attr('font-size', 11).text('Total')
   svg.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em')
-    .attr('fill', '#3f3f46').attr('font-size', 13).attr('font-weight', '600')
+    .attr('fill', 'rgba(255,255,255,0.85)').attr('font-size', 13).attr('font-weight', '600')
     .text(d3.format(',.0f')(total))
 }
 

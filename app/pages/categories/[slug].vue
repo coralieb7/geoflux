@@ -4,18 +4,18 @@
 
       <!-- Global year selector -->
       <div class="flex items-center gap-3 shrink-0 px-1">
-        <span class="text-xs font-medium text-zinc-400 shrink-0">Year</span>
+        <span class="text-xs font-medium text-[#93c5fd]/55 shrink-0">Year</span>
         <input
           type="range"
           :min="YEARS[0]"
           :max="YEARS.at(-1)"
           step="1"
           v-model.number="selectedYear"
-          class="flex-1 accent-blue-500 h-1"
+          class="flex-1 accent-[#3b82f6] h-1"
         />
         <button
           @click="nav.push(`/years/${selectedYear}`, category)"
-          class="text-xs font-semibold text-zinc-500 hover:text-blue-500 w-9 text-right shrink-0 transition-colors"
+          class="text-xs font-semibold text-[#93c5fd]/60 hover:text-[#93c5fd] w-9 text-right shrink-0 transition-colors"
           title="Open year page"
         >{{ selectedYear }}</button>
       </div>
@@ -53,8 +53,8 @@
       <!-- Row 2: bar charts + commodity pie + evolution (fills remaining height) -->
       <div class="grid grid-cols-5 gap-2 flex-1 min-h-0">
 
-        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
           <div class="flex-1 min-h-0">
             <D3BarChart
               :data="topImportersBar"
@@ -64,8 +64,8 @@
           </div>
         </div>
 
-        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
           <div class="flex-1 min-h-0">
             <D3BarChart
               :data="topExportersBar"
@@ -75,9 +75,22 @@
           </div>
         </div>
 
-        <!-- Commodity breakdown pie chart -->
-        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Commodities</h3>
+        <!-- Commodity breakdown pie with import/export toggle -->
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <div class="flex items-center justify-between shrink-0 mb-2">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">Commodities</h3>
+            <div class="flex gap-0.5">
+              <button
+                v-for="opt in PIE_MODE_OPTS"
+                :key="opt.key"
+                @click="commodityMode = opt.key"
+                :class="commodityMode === opt.key
+                  ? 'bg-[#2d6bb5] text-white'
+                  : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
+                class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
+              >{{ opt.label }}</button>
+            </div>
+          </div>
           <div class="flex-1 min-h-0">
             <D3PieChart
               :slices="commodityPieSlices"
@@ -86,10 +99,10 @@
           </div>
         </div>
 
-        <div class="col-span-2 bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
+        <div class="col-span-2 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
           <div class="flex-1 min-h-0">
-            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" :preview="true" />
           </div>
         </div>
 
@@ -141,7 +154,16 @@ const worldShare = computed(() => {
   return worldTotal === 0 ? 0 : (catTotal / worldTotal) * 100
 })
 
-// ── Commodity pie chart ────────────────────────────────────────────────────
+// ── Commodity pie mode ─────────────────────────────────────────────────────
+
+type PieMode = 'imports' | 'exports' | 'both'
+const commodityMode = ref<PieMode>('both')
+
+const PIE_MODE_OPTS: { key: PieMode; label: string }[] = [
+  { key: 'both',    label: 'Both'  },
+  { key: 'imports', label: 'Imp.'  },
+  { key: 'exports', label: 'Exp.'  },
+]
 
 const PIE_PALETTE = [
   '#3b82f6','#f97316','#22c55e','#a855f7','#eab308',
@@ -151,7 +173,12 @@ const PIE_PALETTE = [
 
 const commodityPieSlices = computed<PieSlice[]>(() => {
   const sorted = [...commodities.value]
-    .map(c => ({ id: c.id, label: c.name, value: c.imports.usd + c.exports.usd }))
+    .map(c => ({
+      id: c.id, label: c.name,
+      value: commodityMode.value === 'imports' ? c.imports.usd
+           : commodityMode.value === 'exports' ? c.exports.usd
+           : c.imports.usd + c.exports.usd,
+    }))
     .filter(c => c.value > 0)
     .sort((a, b) => b.value - a.value)
 

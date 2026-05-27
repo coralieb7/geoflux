@@ -1,30 +1,30 @@
 <!--
-  BarChartRace.vue  (rewritten as a progressive line-race chart)
+  BarChartRace.vue  (progressive line-race chart)
   ─────────────────────────────────────────────────────────────────────────────
   • Lines build up from left as the year advances (race effect)
   • Ghost lines (faint full-range preview) shown when ≤ 6 series
-  • Play / Pause / Reset + scrubber controls
+  • Play / Pause / Reset + scrubber controls (hidden in preview mode)
   • Dot + label at the right edge of each active line, de-collided
-  • Transitions when the year advances; instant update when scrubbing
+  • preview prop: auto-loops the animation with no controls shown
 -->
 <template>
   <div class="flex flex-col w-full h-full min-h-0 select-none">
     <!-- Chart SVG -->
     <div ref="container" class="flex-1 min-h-0 overflow-hidden" />
 
-    <!-- Controls -->
-    <div class="flex items-center gap-2 mt-2 px-1 shrink-0">
+    <!-- Controls — hidden in preview mode -->
+    <div v-if="!preview" class="flex items-center gap-2 mt-2 px-1 shrink-0">
       <button
         @click="resetAnim"
         title="Reset"
-        class="p-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-500 transition-colors shrink-0"
+        class="p-1 rounded-md bg-[#071828] hover:bg-[#1a3a5c] text-[#93c5fd]/70 hover:text-[#93c5fd] transition-colors shrink-0"
       >
         <UIcon name="i-heroicons-arrow-uturn-left" class="size-3.5" />
       </button>
       <button
         @click="togglePlay"
         :title="isPlaying ? 'Pause' : 'Play'"
-        class="p-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-500 transition-colors shrink-0"
+        class="p-1 rounded-md bg-[#071828] hover:bg-[#1a3a5c] text-[#93c5fd]/70 hover:text-[#93c5fd] transition-colors shrink-0"
       >
         <UIcon :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" class="size-3.5" />
       </button>
@@ -33,9 +33,9 @@
         :min="0" :max="100" step="0.1"
         v-model.number="progressPct"
         @pointerdown="pauseAnim"
-        class="flex-1 accent-zinc-700 h-1"
+        class="flex-1 accent-[#3b82f6] h-1"
       />
-      <span class="text-xs font-bold text-zinc-600 w-9 text-right shrink-0">
+      <span class="text-xs font-bold text-[#93c5fd] w-9 text-right shrink-0">
         {{ currentYear }}
       </span>
     </div>
@@ -51,7 +51,8 @@ export interface RaceSeries      { id: string; label: string; color: string; dat
 const props = defineProps<{
   series:      RaceSeries[]
   formatValue?: (v: number) => string
-  maxLines?:   number  // max highlighted/labelled lines (default: all ≤6, else 10)
+  maxLines?:   number   // max highlighted/labelled lines (default: all ≤6, else 10)
+  preview?:    boolean  // auto-loops the animation; no controls shown
 }>()
 
 // ── Year helpers ──────────────────────────────────────────────────────────
@@ -108,6 +109,26 @@ function resetAnim() {
   progressPct.value = 0
 }
 
+// ── Preview auto-loop ─────────────────────────────────────────────────────
+
+function startPreviewLoop() {
+  pauseAnim()
+  progressPct.value = 0
+  isPlaying.value = true
+  timer = setInterval(() => {
+    const step = 100 / Math.max(1, allYears.value.length - 1)
+    if (progressPct.value < 100) {
+      progressPct.value = Math.min(100, progressPct.value + step)
+    } else {
+      // End of animation — pause, then restart after a brief hold
+      pauseAnim()
+      setTimeout(() => {
+        if (props.preview) startPreviewLoop()
+      }, 1200)
+    }
+  }, TICK_MS)
+}
+
 onUnmounted(pauseAnim)
 
 // ── D3 state ──────────────────────────────────────────────────────────────
@@ -117,6 +138,12 @@ const container = ref<HTMLDivElement | null>(null)
 const MARGIN   = { top: 20, right: 122, bottom: 32, left: 56 }
 const MIN_GAP  = 14  // minimum px gap between labels
 const FEW_MAX  = 6   // series count below which ghost lines + full opacity apply
+
+// Dark-theme D3 colours
+const GRID_COLOR   = 'rgba(45,107,181,0.18)'
+const AXIS_COLOR   = 'rgba(147,197,253,0.5)'
+const DOMAIN_COLOR = 'rgba(45,107,181,0.3)'
+const IND_COLOR    = 'rgba(147,197,253,0.45)'
 
 interface CS {
   svgEl:   d3.Selection<SVGSVGElement, unknown, null, undefined>
@@ -136,6 +163,11 @@ onMounted(() => {
     const ro = new ResizeObserver(init)
     ro.observe(container.value)
     cleanupRO = () => ro.disconnect()
+  }
+  // Auto-start looping animation in preview mode
+  if (props.preview) {
+    // Small delay so init() has had time to set up the SVG
+    setTimeout(startPreviewLoop, 300)
   }
 })
 
@@ -189,9 +221,9 @@ function init() {
     )
     .call(gg => gg.select('.domain').remove())
     .call(gg => gg.selectAll('.tick line')
-      .attr('stroke', '#e4e4e7').attr('stroke-dasharray', '3,3'))
+      .attr('stroke', GRID_COLOR).attr('stroke-dasharray', '3,3'))
     .call(gg => gg.selectAll('.tick text')
-      .attr('fill', '#a1a1aa').attr('font-size', 10))
+      .attr('fill', AXIS_COLOR).attr('font-size', 10))
 
   // X axis — show ≤ 9 evenly spaced year ticks
   const nTicks = Math.min(yrs.length, 9)
@@ -208,9 +240,9 @@ function init() {
         .tickFormat(d => String(d))
         .tickSize(3)
     )
-    .call(gg => gg.select('.domain').attr('stroke', '#d4d4d8'))
+    .call(gg => gg.select('.domain').attr('stroke', DOMAIN_COLOR))
     .call(gg => gg.selectAll('.tick text')
-      .attr('fill', '#71717a').attr('font-size', 10))
+      .attr('fill', AXIS_COLOR).attr('font-size', 10))
 
   const lineGen = d3.line<RaceSeriesPoint>()
     .x(d => xS(d.year))
@@ -229,7 +261,7 @@ function init() {
         .attr('fill', 'none')
         .attr('stroke', s.color)
         .attr('stroke-width', 1.5)
-        .attr('opacity', 0.13)
+        .attr('opacity', 0.1)
     })
   }
 
@@ -248,10 +280,10 @@ function init() {
   g.append('line')
     .attr('class', 'ind')
     .attr('y1', 0).attr('y2', iH)
-    .attr('stroke', '#71717a')
+    .attr('stroke', IND_COLOR)
     .attr('stroke-width', 1.5)
     .attr('stroke-dasharray', '4,3')
-    .attr('opacity', 0.45)
+    .attr('opacity', 0.6)
 
   // Dots + labels groups
   g.append('g').attr('class', 'dotsG')

@@ -32,7 +32,7 @@
             <YearSlider v-model="compareYear" />
             <button
               @click.stop="nav.push(`/years/${compareYear}`, String(year))"
-              class="text-xs text-blue-500 hover:text-blue-600 hover:underline text-center transition-colors"
+              class="text-xs text-blue-300 hover:text-blue-200 hover:underline text-center transition-colors"
             >
               → Open {{ compareYear }}
             </button>
@@ -54,19 +54,19 @@
 
         <!-- USD / Weight toggle -->
         <div class="flex items-center gap-2 shrink-0">
-          <span class="text-xs text-zinc-400">Show:</span>
+          <span class="text-xs text-[#93c5fd]/55">Show:</span>
           <button
             @click="metric = 'usd'"
             :class="metric === 'usd'
-              ? 'bg-zinc-700 text-white'
-              : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'"
+              ? 'bg-[#2d6bb5] text-white'
+              : 'bg-[#071828] text-[#93c5fd]/60 hover:bg-[#1a3a5c] border border-[#2d6bb5]/30'"
             class="text-xs px-2.5 py-1 rounded-md transition-colors font-medium"
           >$ USD</button>
           <button
             @click="metric = 'weight'"
             :class="metric === 'weight'
-              ? 'bg-zinc-700 text-white'
-              : 'bg-zinc-100 text-zinc-500 hover:bg-zinc-200'"
+              ? 'bg-[#2d6bb5] text-white'
+              : 'bg-[#071828] text-[#93c5fd]/60 hover:bg-[#1a3a5c] border border-[#2d6bb5]/30'"
             class="text-xs px-2.5 py-1 rounded-md transition-colors font-medium"
           >⚖ Weight</button>
         </div>
@@ -75,8 +75,8 @@
         <div class="grid grid-cols-2 gap-2 flex-1 min-h-0">
 
           <!-- Top categories grouped bar chart -->
-          <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-            <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Categories</h3>
+          <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Categories</h3>
             <div class="flex-1 min-h-0">
               <D3GroupedBarChart
                 :data="categoriesChartData"
@@ -87,8 +87,8 @@
           </div>
 
           <!-- Top countries grouped bar chart -->
-          <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-            <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Countries</h3>
+          <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Countries</h3>
             <div class="flex-1 min-h-0">
               <D3GroupedBarChart
                 :data="countriesChartData"
@@ -102,9 +102,9 @@
       </div>
 
       <!-- Row 3: historical context -->
-      <div class="shrink-0 bg-zinc-50 rounded-xl px-3 py-2">
-        <p class="text-xs text-zinc-500 leading-relaxed">
-          <span class="font-semibold text-zinc-600">Historical context: </span>{{ snapshot.historicalNote }}
+      <div class="shrink-0 bg-[#071828] rounded-xl px-3 py-2 border border-[#2d6bb5]/20">
+        <p class="text-xs text-[#93c5fd]/65 leading-relaxed">
+          <span class="font-semibold text-[#93c5fd]/80">Historical context: </span>{{ snapshot.historicalNote }}
         </p>
       </div>
 

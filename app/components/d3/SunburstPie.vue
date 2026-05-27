@@ -2,19 +2,43 @@
   SunburstPie.vue
   ──────────────────────────────────────────────────────────────────────────────
   Two-ring interactive sunburst:
-    Inner ring  = categories
-    Outer ring  = commodities of the active category (shown on hover / lock)
+    Inner ring  = categories (sized by category.value — country-specific)
+    Outer ring  = commodities of the active category (proportionally scaled to
+                  sum to category.value, so relative inner/outer sizes match)
 
-  Interaction model:
-    • Hover category    → outer ring expands with its commodities
-    • Mouse leave       → outer ring collapses (if nothing is locked)
-    • First click cat   → lock: commodities stay; center shows "click → open"
-    • Second click cat  → emit navigate-category
-    • Click commodity   → emit navigate-commodity
-    • Click background  → unlock, collapse outer ring
+  Props:
+    categories   — SunburstCategory[]  (each must carry a `value` field)
+    formatValue  — optional formatter for tooltip value display
+
+  Interaction:
+    • Hover category/commodity  → floating tooltip with name, %, formatted value
+    • Hover category            → outer ring expands with its commodities
+    • Mouse leave               → outer ring collapses (if nothing locked)
+    • First click category      → lock; center shows "click → open"
+    • Second click category     → emit navigate-category
+    • Click commodity           → emit navigate-commodity
+    • Click background          → unlock, collapse outer ring
 -->
 <template>
-  <div ref="el" class="relative w-full h-full select-none" />
+  <div ref="el" class="relative w-full h-full select-none">
+
+    <!-- Hover tooltip -->
+    <Transition name="tip-fade">
+      <div
+        v-if="tooltip.visible"
+        class="absolute z-50 pointer-events-none bg-[#020c1f]/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-xl"
+        :style="{ left: `${tooltip.x}px`, top: `${tooltip.y}px`, transform: 'translate(-50%, -100%)' }"
+      >
+        <div class="text-xs font-semibold text-white/90 max-w-45 leading-tight">{{ tooltip.name }}</div>
+        <div class="flex gap-2 items-center mt-1">
+          <span class="text-[11px] font-medium" :style="{ color: tooltip.color }">{{ tooltip.totalPct }}% of total</span>
+          <span v-if="tooltip.parentPct" class="text-[11px] text-[#93c5fd]/50">· {{ tooltip.parentPct }}% in cat.</span>
+        </div>
+        <div v-if="tooltip.formattedValue" class="text-xs font-bold text-white/75 mt-0.5">{{ tooltip.formattedValue }}</div>
+      </div>
+    </Transition>
+
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -31,11 +55,14 @@ export interface SunburstCategory {
   label: string
   slug: string
   color: string
+  /** Country-specific category value — used to size the inner ring and scale commodities. */
+  value: number
   commodities: SunburstCommodity[]
 }
 
 const props = defineProps<{
   categories: SunburstCategory[]
+  formatValue?: (v: number) => string
 }>()
 
 const emit = defineEmits<{
@@ -45,15 +72,27 @@ const emit = defineEmits<{
 
 const el = ref<HTMLDivElement | null>(null)
 
-// Keep ResizeObserver cleanup across re-renders
+// ── Tooltip reactive state (updated from D3 event handlers) ──────────────────
+const tooltip = reactive({
+  visible:        false,
+  x:              0,
+  y:              0,
+  name:           '',
+  color:          '#93c5fd',
+  totalPct:       '',
+  parentPct:      '',
+  formattedValue: '',
+})
+
+// ── ResizeObserver cleanup ────────────────────────────────────────────────────
 let cleanupRO: (() => void) | null = null
 
 function render() {
   if (!el.value) return
   const container = el.value
 
-  // Remove previous SVG content but keep the container
-  d3.select(container).selectAll('*').remove()
+  // Clear previous SVG (but keep the container so the tooltip Transition still works)
+  d3.select(container).selectAll('svg').remove()
 
   const W = container.clientWidth
   const H = container.clientHeight
@@ -61,9 +100,6 @@ function render() {
   if (size < 20) return
 
   // ── Layout geometry ────────────────────────────────────────────────────────
-  // radius = 1 unit in partition space. With size([2π, 3]):
-  //   inner ring (categories) : y = 1→2  →  radius to 2*radius px
-  //   outer ring (commodities): y = 2→3  →  2*radius to 3*radius (=size/2) px
   const radius = size / 6
 
   const arc = d3.arc<any>()
@@ -75,26 +111,37 @@ function render() {
     .outerRadius(d => Math.max(d.y0 * radius, d.y1 * radius - 1))
 
   // ── Build D3 hierarchy ────────────────────────────────────────────────────
+  // CRITICAL: commodities are scaled so their sum equals category.value.
+  // This ensures the inner ring (categories) is sized by country-specific data,
+  // matching the preview pie chart exactly.
   const rootData = {
     id: '__root__',
     children: props.categories
-      .filter(c => c.commodities.some(cm => cm.value > 0))
-      .map(c => ({
-        id: c.id, label: c.label, slug: c.slug, color: c.color,
-        children: c.commodities
-          .filter(cm => cm.value > 0)
-          .sort((a, b) => b.value - a.value)
-          .slice(0, 15)   // max 15 commodities per category in outer ring
-          .map(cm => ({ id: cm.id, label: cm.label, value: cm.value }))
-      }))
+      .filter(c => c.value > 0 && c.commodities.some(cm => cm.value > 0))
+      .map(c => {
+        const commTotal = c.commodities.reduce((s, cm) => s + (cm.value > 0 ? cm.value : 0), 0)
+        // scale factor: make sum(scaled commodities) = category.value
+        const scale = commTotal > 0 ? c.value / commTotal : 0
+        return {
+          id: c.id, label: c.label, slug: c.slug, color: c.color,
+          // No direct value on the category node — it's derived by D3 from children
+          children: c.commodities
+            .filter(cm => cm.value > 0)
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 15)
+            .map(cm => ({ id: cm.id, label: cm.label, value: cm.value * scale }))
+        }
+      })
   }
 
   const root = d3.partition<any>().size([2 * Math.PI, 3])(
     d3.hierarchy(rootData).sum((d: any) => d.value ?? 0)
   )
 
-  // Initialise current positions:
-  // categories → inner ring; commodities → collapsed (zero-width) in outer ring
+  // Total value = root.value = sum of all category values (for % calculation)
+  const totalValue = root.value ?? 1
+
+  // Initialise current positions
   root.each((d: any) => {
     if (d.depth === 0) return
     if (d.depth === 1) {
@@ -144,20 +191,20 @@ function render() {
       return n.length > 14 ? n.slice(0, 13) + '…' : n
     })
 
-  // ── Centre label (shows active category name + hint) ─────────────────────
+  // ── Centre lock hint ──────────────────────────────────────────────────────
   const cLabel = svg.append('text')
     .attr('text-anchor', 'middle').attr('dy', '-0.5em')
-    .attr('fill', '#18181b').attr('fill-opacity', 0)
+    .attr('fill', 'rgba(255,255,255,0.9)').attr('fill-opacity', 0)
     .style('font-size', '9px').style('font-weight', '600')
     .style('pointer-events', 'none')
   const cHint = svg.append('text')
     .attr('text-anchor', 'middle').attr('dy', '0.8em')
-    .attr('fill', '#71717a').attr('fill-opacity', 0)
+    .attr('fill', 'rgba(147,197,253,0.65)').attr('fill-opacity', 0)
     .style('font-size', '8px')
     .style('pointer-events', 'none')
 
   // ── State ─────────────────────────────────────────────────────────────────
-  let locked: any = null   // hierarchy node of the locked category
+  let locked: any = null
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   function labelVisible(d: any): boolean {
@@ -168,6 +215,23 @@ function render() {
     const x = ((d.x0 + d.x1) / 2) * (180 / Math.PI)
     const y = ((d.y0 + d.y1) / 2) * radius
     return `rotate(${x - 90}) translate(${y},0) rotate(${x < 180 ? 0 : 180})`
+  }
+
+  const fmt = props.formatValue ?? ((v: number) => d3.format(',.0f')(v))
+
+  // ── Tooltip update (called from mousemove on every path) ──────────────────
+  function updateTooltip(event: MouseEvent, d: any) {
+    const [x, y] = d3.pointer(event, container)
+    tooltip.visible        = true
+    tooltip.x              = x
+    tooltip.y              = Math.max(y - 12, 10)
+    tooltip.name           = d.data.label ?? ''
+    tooltip.color          = d.depth === 1 ? d.data.color : d3.rgb(d.parent.data.color).brighter(0.35).formatHex()
+    tooltip.totalPct       = ((d.value / totalValue) * 100).toFixed(1)
+    tooltip.parentPct      = d.depth === 2 && d.parent?.value
+      ? ((d.value / d.parent.value) * 100).toFixed(1)
+      : ''
+    tooltip.formattedValue = fmt(d.value)
   }
 
   // ── Animate outer ring for a given category node ──────────────────────────
@@ -253,11 +317,12 @@ function render() {
 
   // ── Event listeners ───────────────────────────────────────────────────────
   paths
+    // Interaction events (show/hide outer ring, lock)
     .on('mouseenter', (_: any, d: any) => {
-      if (locked) return   // don't change view while something is locked
+      if (locked) return
       if (d.depth === 1) showFor(d, 200)
     })
-    .on('mouseleave', (_: any, d: any) => {
+    .on('mouseleave.ring', (_: any, d: any) => {
       if (locked) return
       if (d.depth === 1) hideAll(200)
     })
@@ -265,16 +330,21 @@ function render() {
       event.stopPropagation()
       if (d.depth === 1) {
         if (locked === d) {
-          // Second click on locked category → navigate
           emit('navigate-category', d.data.slug)
         } else {
-          // First click → lock this category
           locked = d
           showFor(d, 250)
         }
       } else if (d.depth === 2) {
         emit('navigate-commodity', d.data.id)
       }
+    })
+    // Tooltip events (independent, always fire)
+    .on('mousemove.tip', (event: MouseEvent, d: any) => {
+      updateTooltip(event, d)
+    })
+    .on('mouseleave.tip', () => {
+      tooltip.visible = false
     })
 
   // Click on background → unlock and collapse
@@ -295,7 +365,21 @@ onMounted(() => {
   }
 })
 
-onUnmounted(() => { cleanupRO?.() })
+onUnmounted(() => {
+  cleanupRO?.()
+  tooltip.visible = false
+})
 
 watch(() => props.categories, render, { deep: true })
 </script>
+
+<style scoped>
+.tip-fade-enter-active,
+.tip-fade-leave-active {
+  transition: opacity 0.1s ease;
+}
+.tip-fade-enter-from,
+.tip-fade-leave-to {
+  opacity: 0;
+}
+</style>

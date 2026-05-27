@@ -6,24 +6,24 @@
       <div class="flex items-center gap-3 shrink-0 px-1">
         <button
           @click="nav.push(`/categories/${categorySlug}`, com.name)"
-          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 transition-colors shrink-0"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-[#93c5fd]/60 hover:text-[#93c5fd] hover:bg-[#1a3a5c] transition-colors shrink-0"
         >
           <UIcon name="i-heroicons-tag" class="size-3.5" />
           {{ com.category }}
         </button>
-        <span class="text-zinc-200 shrink-0">|</span>
-        <span class="text-xs font-medium text-zinc-400 shrink-0">Year</span>
+        <span class="text-[#2d6bb5]/40 shrink-0">|</span>
+        <span class="text-xs font-medium text-[#93c5fd]/55 shrink-0">Year</span>
         <input
           type="range"
           :min="YEARS[0]"
           :max="YEARS.at(-1)"
           step="1"
           v-model.number="selectedYear"
-          class="flex-1 accent-blue-500 h-1"
+          class="flex-1 accent-[#3b82f6] h-1"
         />
         <button
           @click="nav.push(`/years/${selectedYear}`, com.name)"
-          class="text-xs font-semibold text-zinc-500 hover:text-blue-500 w-9 text-right shrink-0 transition-colors"
+          class="text-xs font-semibold text-[#93c5fd]/60 hover:text-[#93c5fd] w-9 text-right shrink-0 transition-colors"
           title="Open year page"
         >{{ selectedYear }}</button>
       </div>
@@ -61,8 +61,8 @@
       <!-- Row 2: bar charts + evolution chart -->
       <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
 
-        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
           <div class="flex-1 min-h-0">
             <D3BarChart
               :data="topImportersBar"
@@ -72,8 +72,8 @@
           </div>
         </div>
 
-        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
           <div class="flex-1 min-h-0">
             <D3BarChart
               :data="topExportersBar"
@@ -83,8 +83,8 @@
           </div>
         </div>
 
-        <div class="col-span-2 bg-zinc-50 rounded-xl p-3 flex flex-col">
-          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
+        <div class="col-span-2 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
           <div class="flex-1 min-h-0">
             <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
           </div>

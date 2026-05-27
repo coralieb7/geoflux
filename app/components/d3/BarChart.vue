@@ -59,7 +59,7 @@ function draw() {
     .attr('y', d => y(d.label)! + y.bandwidth() / 2)
     .attr('dy', '0.35em')
     .attr('text-anchor', 'end')
-    .attr('fill', '#71717a')
+    .attr('fill', 'rgba(147,197,253,0.6)')
     .attr('font-size', 12)
     .text(d => d.label.length > 14 ? d.label.slice(0, 13) + '…' : d.label)
 
@@ -71,7 +71,7 @@ function draw() {
     .attr('x', d => x(d.value) + 6)
     .attr('y', d => y(d.label)! + y.bandwidth() / 2)
     .attr('dy', '0.35em')
-    .attr('fill', '#71717a')
+    .attr('fill', 'rgba(147,197,253,0.7)')
     .attr('font-size', 11)
     .text(d => fmt(d.value))
 }

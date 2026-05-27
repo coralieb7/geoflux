@@ -15,35 +15,35 @@
           width="99.8%" height="99.8%"
           rx="15" ry="15"
           fill="none"
-          stroke="#94a3b8"
-          stroke-width="2"
+          stroke="#2d6bb5"
+          stroke-width="1.5"
           pathLength="1"
           stroke-dasharray="1"
           stroke-dashoffset="1"
         />
       </svg>
 
-      <!-- Phase 2: White content box -->
+      <!-- Phase 2: Dark content box -->
       <Transition name="window-in">
         <div
           v-if="showWindow"
-          class="absolute inset-0 bg-white rounded-2xl shadow-2xl pointer-events-auto flex flex-col border border-zinc-200 overflow-hidden"
+          class="absolute inset-0 bg-[#0d2545] rounded-2xl shadow-2xl pointer-events-auto flex flex-col border border-[#2d6bb5] overflow-hidden"
         >
           <!-- Header -->
-          <div class="flex items-center justify-between px-4 py-2 border-b border-zinc-100 shrink-0">
+          <div class="flex items-center justify-between px-4 py-2 border-b border-[#2d6bb5]/25 shrink-0">
             <div class="flex items-center gap-1 min-w-0 overflow-hidden">
               <template v-for="(entry, i) in stack" :key="i">
                 <button
                   @click="jumpTo(i)"
-                  class="shrink-0 text-xs text-zinc-400 hover:text-zinc-600 transition-colors truncate max-w-28"
+                  class="shrink-0 text-xs text-[#93c5fd]/55 hover:text-[#93c5fd] transition-colors truncate max-w-28"
                 >{{ entry.label }}</button>
-                <span class="shrink-0 text-zinc-300 select-none text-xs">›</span>
+                <span class="shrink-0 text-[#2d6bb5]/60 select-none text-xs">›</span>
               </template>
-              <h1 class="text-sm font-semibold text-zinc-700 truncate">{{ title }}</h1>
+              <h1 class="text-sm font-semibold text-white/90 truncate">{{ title }}</h1>
             </div>
             <button
               @click="onClose"
-              class="shrink-0 ml-3 p-1.5 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400"
+              class="shrink-0 ml-3 p-1.5 rounded-full hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
             >
               <UIcon name="i-heroicons-x-mark" class="size-5" />
             </button>
