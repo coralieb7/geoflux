@@ -1,14 +1,15 @@
 <template>
   <div
     :class="[
-      'rounded-xl p-3 flex flex-col gap-1.5 transition-colors border border-[#2d6bb5]/20',
+      'rounded-xl flex flex-col transition-colors border border-[#2d6bb5]/20',
+      compact ? 'p-2 gap-1' : 'p-3 gap-1.5',
       clickable ? 'bg-[#071828] cursor-pointer hover:bg-[#1a3a5c]' : 'bg-[#071828]',
     ]"
     @click="clickable ? toggle() : undefined"
   >
     <!-- Title row -->
     <div class="flex items-center justify-between">
-      <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">{{ title }}</h3>
+      <h3 :class="['font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none', compact ? 'text-[10px]' : 'text-xs']">{{ title }}</h3>
       <div class="flex items-center gap-1">
         <slot name="badge" />
         <UIcon
@@ -20,10 +21,15 @@
     </div>
 
     <!-- Primary value -->
-    <div v-if="value" :class="['text-xl font-bold leading-tight', colorClass]">{{ value }}</div>
+    <div v-if="value" :class="['font-bold leading-tight', compact ? 'text-base' : 'text-xl', colorClass]">{{ value }}</div>
 
-    <!-- Subtitle -->
-    <p v-if="subtitle" class="text-xs text-[#93c5fd]/50 leading-none">{{ subtitle }}</p>
+    <!-- Subtitle — clickable if subtitleClick is provided -->
+    <component
+      :is="subtitleClick ? 'button' : 'p'"
+      v-if="subtitle"
+      :class="['text-xs text-[#93c5fd]/50 leading-none text-left', subtitleClick ? 'hover:text-[#93c5fd] transition-colors' : '']"
+      @click.stop="subtitleClick?.()"
+    >{{ subtitle }}</component>
 
     <!-- Always-visible body -->
     <slot name="body" />
@@ -42,9 +48,11 @@ const props = defineProps<{
   title: string
   value?: string
   subtitle?: string
+  subtitleClick?: () => void
   color?: 'blue' | 'orange' | 'green' | 'red' | 'default'
   expandable?: boolean
   clickable?: boolean
+  compact?: boolean
 }>()
 
 const expanded = ref(false)

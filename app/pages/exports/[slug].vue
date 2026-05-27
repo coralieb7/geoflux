@@ -20,8 +20,8 @@
         >{{ selectedYear }}</button>
       </div>
 
-      <!-- Row 1: 4 stat cards -->
-      <div class="grid grid-cols-4 gap-2 shrink-0">
+      <!-- Row 1: 5 cards (value, volume, trend, world share, top destinations) -->
+      <div class="grid grid-cols-5 gap-2 shrink-0">
 
         <StatCard
           title="Export Value (USD)"
@@ -39,23 +39,20 @@
           :value="compareData.exports.usd === 0 ? 'N/A' : formatGrowth(trendGrowth)"
           :color="compareData.exports.usd === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
           :subtitle="`vs ${actualCompareYear}: ${formatUsd(compareData.exports.usd)}`"
+          :subtitle-click="() => nav.push(`/years/${actualCompareYear}`, `${c.name} — Exports`)"
         />
 
         <StatCard
           title="Share of World Exports"
           :value="formatPercent(worldShare)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, `${c.name} — Exports`)"
         />
 
-      </div>
-
-      <!-- Row 2: top destinations + evolution chart -->
-      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
-
-        <!-- Top 3 export destinations -->
+        <!-- Top export destinations -->
         <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20">
           <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Destinations</h3>
-          <p class="text-xs text-[#93c5fd]/45">Year {{ selectedYear }}</p>
+          <button @click="nav.push(`/years/${selectedYear}`, `${c.name} — Exports`)" class="text-[10px] text-[#93c5fd]/45 hover:text-[#93c5fd] transition-colors text-left">Year {{ selectedYear }}</button>
           <div v-if="tradeConnections" class="flex flex-col gap-1.5 mt-0.5">
             <div
               v-for="(pct, country) in tradeConnections.top3exportCountries"
@@ -69,20 +66,20 @@
           <p v-else class="text-xs text-[#93c5fd]/40 mt-0.5">No data for {{ selectedYear }}</p>
         </div>
 
-        <!-- Evolution chart -->
-        <div class="col-span-3 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2">Export Evolution (1988–2016)</h3>
-          <div class="flex-1 min-h-0">
-            <D3BarChartRace
-              :series="[
-                { id: 'exports', label: 'Exports (USD)',    color: '#f97316', data: usdSeries },
-                { id: 'weight',  label: 'Exports (weight)', color: '#a855f7', data: weightSeries },
-              ]"
-              :format-value="formatUsd"
-            />
-          </div>
-        </div>
+      </div>
 
+      <!-- Row 2: full-width evolution chart -->
+      <div class="flex-1 min-h-0 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+        <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Export Evolution (1988–2016)</h3>
+        <div class="flex-1 min-h-0">
+          <D3BarChartRace
+            :series="[
+              { id: 'exports', label: 'Exports (USD)',    color: '#f97316', data: usdSeries },
+              { id: 'weight',  label: 'Exports (weight)', color: '#a855f7', data: weightSeries },
+            ]"
+            :format-value="formatUsd"
+          />
+        </div>
       </div>
     </div>
   </PageWindow>

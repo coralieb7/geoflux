@@ -105,29 +105,44 @@ export function buildConnectionFeatures(
       properties: { flowType, partnerName, homeName, year: String(year) },
     })
 
-    if (isImport) lines.push({
-      type:     'Feature',
-      geometry: { type: 'LineString', coordinates: greatCircleArc(partnerLngLat, hLngLat) },
-      properties: {
-        flowType:    'import',
-        homeName,
-        partnerName,
-        year:        String(year),
-        value:       importers.get(partner) ?? 0,
-      },
-    })
-
-    if (isExport) lines.push({
-      type:     'Feature',
-      geometry: { type: 'LineString', coordinates: greatCircleArc(hLngLat, partnerLngLat) },
-      properties: {
-        flowType:    'export',
-        homeName,
-        partnerName,
-        year:        String(year),
-        value:       exporters.get(partner) ?? 0,
-      },
-    })
+    if (isImport && isExport) {
+      lines.push({
+        type:     'Feature',
+        geometry: { type: 'LineString', coordinates: greatCircleArc(partnerLngLat, hLngLat) },
+        properties: {
+          flowType:    'both',
+          homeName,
+          partnerName,
+          year:        String(year),
+          importValue: importers.get(partner) ?? 0,
+          exportValue: exporters.get(partner) ?? 0,
+        },
+      })
+    } else if (isImport) {
+      lines.push({
+        type:     'Feature',
+        geometry: { type: 'LineString', coordinates: greatCircleArc(partnerLngLat, hLngLat) },
+        properties: {
+          flowType:    'import',
+          homeName,
+          partnerName,
+          year:        String(year),
+          value:       importers.get(partner) ?? 0,
+        },
+      })
+    } else if (isExport) {
+      lines.push({
+        type:     'Feature',
+        geometry: { type: 'LineString', coordinates: greatCircleArc(hLngLat, partnerLngLat) },
+        properties: {
+          flowType:    'export',
+          homeName,
+          partnerName,
+          year:        String(year),
+          value:       exporters.get(partner) ?? 0,
+        },
+      })
+    }
   }
 
   return { lines, dots }

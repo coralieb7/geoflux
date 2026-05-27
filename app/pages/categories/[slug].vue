@@ -1,6 +1,82 @@
 <template>
   <PageWindow :title="category">
-    <div class="flex flex-col gap-2 h-full">
+    <div class="relative flex flex-col gap-2 h-full">
+
+      <!-- Full-screen evolution overlay -->
+      <Transition name="overlay-in">
+        <div
+          v-if="evoFullScreen"
+          class="absolute inset-0 z-20 bg-[#0d2545] border border-[#2d6bb5]/30 rounded-xl flex flex-col"
+        >
+          <div class="flex items-center justify-between px-3 py-2 border-b border-[#2d6bb5]/25 shrink-0">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/70 uppercase tracking-wide">
+              Evolution Over Time — {{ category }}
+            </h3>
+            <button
+              @click="evoFullScreen = false"
+              class="p-1.5 rounded-full hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+              title="Collapse"
+            >
+              <UIcon name="i-heroicons-arrows-pointing-in" class="size-4" />
+            </button>
+          </div>
+          <div class="flex-1 min-h-0 p-3">
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
+          </div>
+        </div>
+      </Transition>
+
+      <!-- Full-screen commodity pie overlay -->
+      <Transition name="overlay-in">
+        <div
+          v-if="pieFullScreen"
+          class="absolute inset-0 z-20 bg-[#0d2545] border border-[#2d6bb5]/30 rounded-xl flex flex-col"
+        >
+          <div class="flex items-center justify-between px-3 py-2 border-b border-[#2d6bb5]/25 shrink-0">
+            <div class="flex items-center gap-3 min-w-0 flex-1">
+              <h3 class="text-xs font-semibold text-[#93c5fd]/70 uppercase tracking-wide shrink-0">
+                Commodities — {{ category }}
+              </h3>
+              <div class="flex gap-0.5 shrink-0">
+                <button
+                  v-for="opt in PIE_MODE_OPTS"
+                  :key="opt.key"
+                  @click="commodityMode = opt.key"
+                  :class="commodityMode === opt.key
+                    ? 'bg-[#2d6bb5] text-white'
+                    : 'bg-[#071828] text-[#93c5fd]/60 hover:bg-[#1a3a5c] border border-[#2d6bb5]/30'"
+                  class="text-[10px] px-2 py-0.5 rounded transition-colors font-medium"
+                >{{ opt.label }}</button>
+              </div>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
+                <span class="text-[10px] text-[#93c5fd]/50 shrink-0">Year</span>
+                <input
+                  type="range"
+                  :min="YEARS[0]"
+                  :max="YEARS.at(-1)"
+                  step="1"
+                  v-model.number="selectedYear"
+                  class="flex-1 min-w-0 accent-[#3b82f6] h-1"
+                />
+                <button
+                  @click="nav.push(`/years/${selectedYear}`, category)"
+                  class="text-[10px] font-bold text-[#93c5fd] w-8 text-right shrink-0 hover:text-white transition-colors"
+                >{{ selectedYear }}</button>
+              </div>
+            </div>
+            <button
+              @click="pieFullScreen = false"
+              class="shrink-0 ml-2 p-1.5 rounded-full hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+              title="Collapse"
+            >
+              <UIcon name="i-heroicons-arrows-pointing-in" class="size-4" />
+            </button>
+          </div>
+          <div class="flex-1 min-h-0 p-3">
+            <D3PieChart :slices="commodityPieSlices" :format-value="formatUsd" :on-slice-click="onCommodityClick" />
+          </div>
+        </div>
+      </Transition>
 
       <!-- Global year selector -->
       <div class="flex items-center gap-3 shrink-0 px-1">
@@ -27,12 +103,14 @@
           title="Trade Value (USD)"
           :value="formatUsd(selectedYearData.imports.usd + selectedYearData.exports.usd)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, category)"
         />
 
         <StatCard
           title="Trade Volume"
           :value="formatWeight(selectedYearData.imports.weight + selectedYearData.exports.weight)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, category)"
         />
 
         <StatCard
@@ -40,69 +118,89 @@
           :value="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'N/A' : formatGrowth(trendGrowth)"
           :color="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
           :subtitle="`vs ${actualCompareYear}`"
+          :subtitle-click="() => nav.push(`/years/${actualCompareYear}`, category)"
         />
 
         <StatCard
           title="Share of World Trade"
           :value="formatPercent(worldShare)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, category)"
         />
 
       </div>
 
-      <!-- Row 2: bar charts + commodity pie + evolution (fills remaining height) -->
-      <div class="grid grid-cols-5 gap-2 flex-1 min-h-0">
+      <!-- Row 2: stacked bars (narrow) | pie (medium) | evolution (wide) -->
+      <div class="grid grid-cols-[3fr_4fr_6fr] gap-2 flex-1 min-h-0">
 
-        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
-          <div class="flex-1 min-h-0">
-            <D3BarChart
-              :data="topImportersBar"
-              :format-value="formatUsd"
-              :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, category)"
-            />
+        <!-- Col 1: top importers + exporters stacked -->
+        <div class="flex flex-col gap-2 min-h-0">
+          <div class="flex-1 min-h-0 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
+            <div class="flex-1 min-h-0">
+              <D3BarChart
+                :data="topImportersBar"
+                :format-value="formatUsd"
+                :on-bar-click="d => { const iso = isoFromName(d.label); if (iso) nav.push(`/countries/${iso}`, category) }"
+              />
+            </div>
+          </div>
+          <div class="flex-1 min-h-0 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
+            <div class="flex-1 min-h-0">
+              <D3BarChart
+                :data="topExportersBar"
+                :format-value="formatUsd"
+                :on-bar-click="d => { const iso = isoFromName(d.label); if (iso) nav.push(`/countries/${iso}`, category) }"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
-          <div class="flex-1 min-h-0">
-            <D3BarChart
-              :data="topExportersBar"
-              :format-value="formatUsd"
-              :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, category)"
-            />
-          </div>
-        </div>
-
-        <!-- Commodity breakdown pie with import/export toggle -->
+        <!-- Col 2: commodity breakdown pie (expandable) -->
         <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
           <div class="flex items-center justify-between shrink-0 mb-2">
             <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">Commodities</h3>
-            <div class="flex gap-0.5">
+            <div class="flex items-center gap-1">
+              <div class="flex gap-0.5">
+                <button
+                  v-for="opt in PIE_MODE_OPTS"
+                  :key="opt.key"
+                  @click="commodityMode = opt.key"
+                  :class="commodityMode === opt.key
+                    ? 'bg-[#2d6bb5] text-white'
+                    : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
+                  class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
+                >{{ opt.label }}</button>
+              </div>
               <button
-                v-for="opt in PIE_MODE_OPTS"
-                :key="opt.key"
-                @click="commodityMode = opt.key"
-                :class="commodityMode === opt.key
-                  ? 'bg-[#2d6bb5] text-white'
-                  : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
-                class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
-              >{{ opt.label }}</button>
+                @click="pieFullScreen = true"
+                class="p-1 rounded hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+                title="Expand"
+              >
+                <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5" />
+              </button>
             </div>
           </div>
           <div class="flex-1 min-h-0">
-            <D3PieChart
-              :slices="commodityPieSlices"
-              :on-slice-click="onCommodityClick"
-            />
+            <D3PieChart :slices="commodityPieSlices" :format-value="formatUsd" :on-slice-click="onCommodityClick" />
           </div>
         </div>
 
-        <div class="col-span-2 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
+        <!-- Col 3: evolution (expandable, with controls) -->
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+          <div class="flex items-center justify-between shrink-0 mb-2">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">Evolution Over Time</h3>
+            <button
+              @click="evoFullScreen = true"
+              class="p-1 rounded hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+              title="Expand"
+            >
+              <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5" />
+            </button>
+          </div>
           <div class="flex-1 min-h-0">
-            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" :preview="true" />
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" :hide-year-scrubber="true" />
           </div>
         </div>
 
@@ -154,6 +252,11 @@ const worldShare = computed(() => {
   return worldTotal === 0 ? 0 : (catTotal / worldTotal) * 100
 })
 
+// ── Overlay state ──────────────────────────────────────────────────────────
+
+const evoFullScreen = ref(false)
+const pieFullScreen = ref(false)
+
 // ── Commodity pie mode ─────────────────────────────────────────────────────
 
 type PieMode = 'imports' | 'exports' | 'both'
@@ -173,12 +276,15 @@ const PIE_PALETTE = [
 
 const commodityPieSlices = computed<PieSlice[]>(() => {
   const sorted = [...commodities.value]
-    .map(c => ({
-      id: c.id, label: c.name,
-      value: commodityMode.value === 'imports' ? c.imports.usd
-           : commodityMode.value === 'exports' ? c.exports.usd
-           : c.imports.usd + c.exports.usd,
-    }))
+    .map(c => {
+      const yr = c.series.find(s => s.year === selectedYear.value) ?? c.series.at(-1)
+      return {
+        id: c.id, label: c.name,
+        value: commodityMode.value === 'imports' ? (yr?.imports.usd ?? 0)
+             : commodityMode.value === 'exports' ? (yr?.exports.usd ?? 0)
+             : (yr?.imports.usd ?? 0) + (yr?.exports.usd ?? 0),
+      }
+    })
     .filter(c => c.value > 0)
     .sort((a, b) => b.value - a.value)
 
@@ -192,21 +298,38 @@ const commodityPieSlices = computed<PieSlice[]>(() => {
 
 function onCommodityClick(slice: PieSlice) {
   if (slice.id === '__other__') return
+  pieFullScreen.value = false
   nav.push(`/commodities/${slice.id}`, category.value)
 }
 
 // ── Bar charts + evolution ─────────────────────────────────────────────────
 
+// Estimate year-specific category value by scaling each country's 2016 byCategory
+// value by the ratio of their year-specific total to their 2016 total.
 const topImporters = computed(() =>
   [...TRADE_DATA]
-    .map(c => ({ name: c.name, iso3: c.iso3, usd: c.byCategory[category.value]?.imports.usd ?? 0 }))
+    .map(c => {
+      const cat2016 = c.byCategory[category.value]?.imports.usd ?? 0
+      if (cat2016 === 0) return { name: c.name, iso3: c.iso3, usd: 0 }
+      const ref = c.series.at(-1)?.imports.usd ?? 0
+      const yr  = c.series.find(s => s.year === selectedYear.value)?.imports.usd ?? 0
+      const usd = ref > 0 ? Math.round(cat2016 * (yr / ref)) : cat2016
+      return { name: c.name, iso3: c.iso3, usd }
+    })
     .filter(c => c.usd > 0)
     .sort((a, b) => b.usd - a.usd)
     .slice(0, 5)
 )
 const topExporters = computed(() =>
   [...TRADE_DATA]
-    .map(c => ({ name: c.name, iso3: c.iso3, usd: c.byCategory[category.value]?.exports.usd ?? 0 }))
+    .map(c => {
+      const cat2016 = c.byCategory[category.value]?.exports.usd ?? 0
+      if (cat2016 === 0) return { name: c.name, iso3: c.iso3, usd: 0 }
+      const ref = c.series.at(-1)?.exports.usd ?? 0
+      const yr  = c.series.find(s => s.year === selectedYear.value)?.exports.usd ?? 0
+      const usd = ref > 0 ? Math.round(cat2016 * (yr / ref)) : cat2016
+      return { name: c.name, iso3: c.iso3, usd }
+    })
     .filter(c => c.usd > 0)
     .sort((a, b) => b.usd - a.usd)
     .slice(0, 5)
@@ -224,3 +347,15 @@ const evolutionSeries = computed(() => [
   { id: 'exports', label: 'Exports', color: '#f97316', data: series.value.map(p => ({ year: p.year, value: p.exports.usd })) },
 ])
 </script>
+
+<style scoped>
+.overlay-in-enter-active,
+.overlay-in-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.overlay-in-enter-from,
+.overlay-in-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+</style>

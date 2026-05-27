@@ -13,15 +13,19 @@
       class="absolute z-30 pointer-events-none select-none"
       :style="{ left: `${lineTooltip.x + 16}px`, top: `${lineTooltip.y - 8}px` }"
     >
-      <div class="bg-[#020c1f]/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-xl w-max max-w-[220px]">
-        <div class="text-[11px] font-bold mb-1" :class="lineTooltip.flowType === 'import' ? 'text-blue-300' : 'text-orange-300'">
-          {{ lineTooltip.flowType === 'import' ? 'Import' : 'Export' }}
+      <div class="bg-[#020c1f]/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-xl w-max max-w-55">
+        <div class="text-[11px] font-bold mb-1"
+          :class="lineTooltip.flowType === 'both' ? 'text-purple-300' : lineTooltip.flowType === 'import' ? 'text-blue-300' : 'text-orange-300'">
+          {{ lineTooltip.flowType === 'import' ? 'Import' : lineTooltip.flowType === 'export' ? 'Export' : 'Import & Export' }}
         </div>
         <div class="text-xs text-white/85 font-medium">{{ lineTooltip.label }}</div>
         <div class="text-[11px] text-white/50 mt-0.5">Year: {{ lineTooltip.year }}</div>
         <div v-if="lineTooltip.value" class="text-xs font-bold mt-1" :class="lineTooltip.flowType === 'import' ? 'text-blue-300' : 'text-orange-300'">
           {{ lineTooltip.value }}
         </div>
+        <div v-if="lineTooltip.importValue" class="text-xs font-bold mt-1 text-blue-300">↓ {{ lineTooltip.importValue }}</div>
+        <div v-if="lineTooltip.exportValue" class="text-xs font-bold mt-0.5 text-orange-300">↑ {{ lineTooltip.exportValue }}</div>
+        <div v-if="lineTooltip.flowType === 'both' && lineTooltip.homeName" class="text-[10px] text-white/30 mt-1 italic">{{ lineTooltip.homeName }}'s reported data</div>
       </div>
     </div>
 
@@ -31,7 +35,7 @@
       class="absolute z-30 pointer-events-none select-none"
       :style="{ left: `${countryTooltip.x + 16}px`, top: `${countryTooltip.y - 8}px` }"
     >
-      <div class="bg-[#020c1f]/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-xl w-max max-w-[220px]">
+      <div class="bg-[#020c1f]/95 backdrop-blur-sm border border-white/10 rounded-xl px-3 py-2 shadow-xl w-max max-w-55">
         <div class="text-xs font-bold text-white/90 mb-1">{{ countryTooltip.name }}</div>
         <div v-if="countryTooltip.imports" class="text-[11px] text-blue-300">↓ {{ countryTooltip.imports }}</div>
         <div v-if="countryTooltip.exports" class="text-[11px] text-orange-300">↑ {{ countryTooltip.exports }}</div>
@@ -70,13 +74,16 @@ const isWindowOpen = useState('pageWindowOpen', () => false)
 // Two separate tooltips; line tooltip takes visual priority (rendered with v-if/v-else-if)
 
 const lineTooltip = reactive({
-  visible:  false,
-  x:        0,
-  y:        0,
-  flowType: 'import',
-  label:    '',
-  year:     '',
-  value:    '',
+  visible:     false,
+  x:           0,
+  y:           0,
+  flowType:    'import',
+  label:       '',
+  year:        '',
+  value:       '',       // single-direction flows
+  importValue: '',       // 'both' flow type
+  exportValue: '',       // 'both' flow type
+  homeName:    '',       // whose data perspective is shown
 })
 
 const countryTooltip = reactive({
@@ -275,23 +282,30 @@ function setupInteractions(m: mapboxgl.Map) {
     const props = e.features[0]?.properties
     if (!props) return
 
-    const isImport = props.flowType === 'import'
-    const label    = isImport
-      ? `${props.partnerName} → ${props.homeName}`
-      : `${props.homeName} → ${props.partnerName}`
+    const flowType = props.flowType ?? 'import'
+    const label = flowType === 'both'
+      ? `${props.partnerName} ↔ ${props.homeName}`
+      : flowType === 'import'
+        ? `${props.partnerName} → ${props.homeName}`
+        : `${props.homeName} → ${props.partnerName}`
 
-    let valStr = ''
-    if (props.value && Number(props.value) > 0) {
-      valStr = formatUsd(Number(props.value))
+    lineTooltip.visible     = true
+    lineTooltip.x           = e.point.x
+    lineTooltip.y           = e.point.y
+    lineTooltip.flowType    = flowType
+    lineTooltip.label       = label
+    lineTooltip.year        = props.year ?? String(selectedYear.value)
+    lineTooltip.value       = ''
+    lineTooltip.importValue = ''
+    lineTooltip.exportValue = ''
+    lineTooltip.homeName    = props.homeName ?? ''
+
+    if (flowType === 'both') {
+      if (props.importValue && Number(props.importValue) > 0) lineTooltip.importValue = formatUsd(Number(props.importValue))
+      if (props.exportValue && Number(props.exportValue) > 0) lineTooltip.exportValue = formatUsd(Number(props.exportValue))
+    } else if (props.value && Number(props.value) > 0) {
+      lineTooltip.value = formatUsd(Number(props.value))
     }
-
-    lineTooltip.visible  = true
-    lineTooltip.x        = e.point.x
-    lineTooltip.y        = e.point.y
-    lineTooltip.flowType = props.flowType ?? 'import'
-    lineTooltip.label    = label
-    lineTooltip.year     = props.year ?? String(selectedYear.value)
-    lineTooltip.value    = valStr
 
     m.getCanvas().style.cursor = 'crosshair'
   })

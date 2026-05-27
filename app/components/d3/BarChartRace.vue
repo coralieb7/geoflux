@@ -28,16 +28,18 @@
       >
         <UIcon :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" class="size-3.5" />
       </button>
-      <input
-        type="range"
-        :min="0" :max="100" step="0.1"
-        v-model.number="progressPct"
-        @pointerdown="pauseAnim"
-        class="flex-1 accent-[#3b82f6] h-1"
-      />
-      <span class="text-xs font-bold text-[#93c5fd] w-9 text-right shrink-0">
-        {{ currentYear }}
-      </span>
+      <template v-if="!hideYearScrubber">
+        <input
+          type="range"
+          :min="0" :max="100" step="0.1"
+          v-model.number="progressPct"
+          @pointerdown="pauseAnim"
+          class="flex-1 accent-[#3b82f6] h-1"
+        />
+        <span class="text-xs font-bold text-[#93c5fd] w-9 text-right shrink-0">
+          {{ currentYear }}
+        </span>
+      </template>
     </div>
   </div>
 </template>
@@ -49,10 +51,11 @@ export interface RaceSeriesPoint { year: number; value: number }
 export interface RaceSeries      { id: string; label: string; color: string; data: RaceSeriesPoint[] }
 
 const props = defineProps<{
-  series:      RaceSeries[]
-  formatValue?: (v: number) => string
-  maxLines?:   number   // max highlighted/labelled lines (default: all ≤6, else 10)
-  preview?:    boolean  // auto-loops the animation; no controls shown
+  series:            RaceSeries[]
+  formatValue?:      (v: number) => string
+  maxLines?:         number   // max highlighted/labelled lines (default: all ≤6, else 10)
+  preview?:          boolean  // auto-loops the animation; no controls shown
+  hideYearScrubber?: boolean  // show play/reset but hide the range slider + year label
 }>()
 
 // ── Year helpers ──────────────────────────────────────────────────────────

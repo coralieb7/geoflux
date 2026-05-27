@@ -2,6 +2,13 @@
   <PageWindow :title="String(year)">
     <div class="flex flex-col gap-2 h-full">
 
+      <!-- Row 0: historical context -->
+      <div class="shrink-0 bg-[#071828] rounded-xl px-3 py-2 border border-[#2d6bb5]/20">
+        <p class="text-xs text-[#93c5fd]/65 leading-relaxed">
+          <span class="font-semibold text-[#93c5fd]/80">Historical context: </span>{{ snapshot.historicalNote }}
+        </p>
+      </div>
+
       <!-- Row 1: top-level stats -->
       <div class="grid grid-cols-4 gap-2 shrink-0">
 
@@ -25,6 +32,7 @@
           :value="formatGrowth(diffPercent)"
           :color="diffPercent >= 0 ? 'green' : 'red'"
           :subtitle="`Compared to ${compareYear}`"
+          :subtitle-click="() => nav.push(`/years/${compareYear}`, String(year))"
           expandable
           clickable
         >
@@ -101,12 +109,6 @@
         </div>
       </div>
 
-      <!-- Row 3: historical context -->
-      <div class="shrink-0 bg-[#071828] rounded-xl px-3 py-2 border border-[#2d6bb5]/20">
-        <p class="text-xs text-[#93c5fd]/65 leading-relaxed">
-          <span class="font-semibold text-[#93c5fd]/80">Historical context: </span>{{ snapshot.historicalNote }}
-        </p>
-      </div>
 
     </div>
   </PageWindow>

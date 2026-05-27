@@ -10,6 +10,7 @@ export interface PieSlice { id: string; label: string; value: number; color?: st
 const props = defineProps<{
   slices: PieSlice[]
   onSliceClick?: (slice: PieSlice) => void
+  formatValue?: (v: number) => string
 }>()
 
 const container = ref<HTMLDivElement | null>(null)
@@ -29,6 +30,7 @@ function draw() {
 
   // Calculate total early so we can use it for percentages
   const total = d3.sum(props.slices, d => d.value)
+  const fmt = props.formatValue ?? ((v: number) => d3.format(',.0f')(v))
 
   const svg = d3.select(container.value)
     .append('svg')
@@ -98,7 +100,7 @@ function draw() {
     .attr('fill', 'rgba(147,197,253,0.5)').attr('font-size', 11).text('Total')
   svg.append('text').attr('text-anchor', 'middle').attr('dy', '1.1em')
     .attr('fill', 'rgba(255,255,255,0.85)').attr('font-size', 13).attr('font-weight', '600')
-    .text(d3.format(',.0f')(total))
+    .text(fmt(total))
 }
 
 onMounted(() => {

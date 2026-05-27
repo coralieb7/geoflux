@@ -1,6 +1,30 @@
 <template>
   <PageWindow :title="com.name">
-    <div class="flex flex-col gap-2 h-full">
+    <div class="relative flex flex-col gap-2 h-full">
+
+      <!-- Full-screen evolution overlay -->
+      <Transition name="overlay-in">
+        <div
+          v-if="evoFullScreen"
+          class="absolute inset-0 z-20 bg-[#0d2545] border border-[#2d6bb5]/30 rounded-xl flex flex-col"
+        >
+          <div class="flex items-center justify-between px-3 py-2 border-b border-[#2d6bb5]/25 shrink-0">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/70 uppercase tracking-wide">
+              Evolution Over Time — {{ com.name }}
+            </h3>
+            <button
+              @click="evoFullScreen = false"
+              class="p-1.5 rounded-full hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+              title="Collapse"
+            >
+              <UIcon name="i-heroicons-arrows-pointing-in" class="size-4" />
+            </button>
+          </div>
+          <div class="flex-1 min-h-0 p-3">
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
+          </div>
+        </div>
+      </Transition>
 
       <!-- Category link + year selector -->
       <div class="flex items-center gap-3 shrink-0 px-1">
@@ -35,12 +59,14 @@
           title="Trade Value (USD)"
           :value="formatUsd(selectedYearData.imports.usd + selectedYearData.exports.usd)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, com.name)"
         />
 
         <StatCard
           title="Trade Volume"
           :value="formatWeight(selectedYearData.imports.weight + selectedYearData.exports.weight)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, com.name)"
         />
 
         <StatCard
@@ -48,6 +74,7 @@
           :value="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'N/A' : formatGrowth(trendGrowth)"
           :color="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
           :subtitle="`vs ${actualCompareYear}`"
+          :subtitle-click="() => nav.push(`/years/${actualCompareYear}`, com.name)"
         />
 
         <StatCard
@@ -58,35 +85,47 @@
 
       </div>
 
-      <!-- Row 2: bar charts + evolution chart -->
-      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
+      <!-- Row 2: stacked bars | evolution (fills remaining height) -->
+      <div class="grid grid-cols-3 gap-2 flex-1 min-h-0">
 
-        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
-          <div class="flex-1 min-h-0">
-            <D3BarChart
-              :data="topImportersBar"
-              :format-value="formatUsd"
-              :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, com.name)"
-            />
+        <!-- Col 1: top importers + exporters stacked -->
+        <div class="flex flex-col gap-2 min-h-0">
+          <div class="flex-1 min-h-0 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
+            <div class="flex-1 min-h-0">
+              <D3BarChart
+                :data="topImportersBar"
+                :format-value="formatUsd"
+                :on-bar-click="d => { const iso = isoFromName(d.label); if (iso) nav.push(`/countries/${iso}`, com.name) }"
+              />
+            </div>
+          </div>
+          <div class="flex-1 min-h-0 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
+            <div class="flex-1 min-h-0">
+              <D3BarChart
+                :data="topExportersBar"
+                :format-value="formatUsd"
+                :on-bar-click="d => { const iso = isoFromName(d.label); if (iso) nav.push(`/countries/${iso}`, com.name) }"
+              />
+            </div>
           </div>
         </div>
 
-        <div class="bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
-          <div class="flex-1 min-h-0">
-            <D3BarChart
-              :data="topExportersBar"
-              :format-value="formatUsd"
-              :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, com.name)"
-            />
-          </div>
-        </div>
-
+        <!-- Cols 2–3: evolution chart (expandable) -->
         <div class="col-span-2 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
+          <div class="flex items-center justify-between shrink-0 mb-2">
+            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">Evolution Over Time</h3>
+            <button
+              @click="evoFullScreen = true"
+              class="p-1 rounded hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+              title="Expand"
+            >
+              <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5" />
+            </button>
+          </div>
           <div class="flex-1 min-h-0">
-            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" :hide-year-scrubber="true" />
           </div>
         </div>
 
@@ -118,6 +157,8 @@ const catSeries    = computed(() => getCategoryYearlySeries(com.value.category))
 
 const selectedYear     = ref(YEARS.at(-1) ?? 2016)
 const selectedYearData = computed(() => series.value.find(p => p.year === selectedYear.value) ?? series.value.at(-1)!)
+
+const evoFullScreen = ref(false)
 const catYearData      = computed(() => catSeries.value.find(p => p.year === selectedYear.value) ?? catSeries.value.at(-1)!)
 
 // 10-Year Trend
@@ -182,3 +223,15 @@ const evolutionSeries = computed(() => [
   { id: 'exports', label: 'Exports', color: '#f97316', data: series.value.map(p => ({ year: p.year, value: p.exports.usd })) },
 ])
 </script>
+
+<style scoped>
+.overlay-in-enter-active,
+.overlay-in-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.overlay-in-enter-from,
+.overlay-in-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+</style>

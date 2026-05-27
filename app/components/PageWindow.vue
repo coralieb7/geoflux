@@ -50,7 +50,7 @@
           </div>
 
           <!-- Content (no page-level scroll) -->
-          <div class="flex-1 overflow-hidden p-3">
+          <div class="flex-1 min-h-0 overflow-hidden p-3">
             <slot />
           </div>
         </div>

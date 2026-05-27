@@ -20,8 +20,8 @@
         >{{ selectedYear }}</button>
       </div>
 
-      <!-- Row 1: 4 stat cards (auto-height) -->
-      <div class="grid grid-cols-4 gap-2 shrink-0">
+      <!-- Row 1: 5 cards (value, volume, trend, world share, top sources) -->
+      <div class="grid grid-cols-5 gap-2 shrink-0">
 
         <StatCard
           title="Import Value (USD)"
@@ -39,23 +39,20 @@
           :value="compareData.imports.usd === 0 ? 'N/A' : formatGrowth(trendGrowth)"
           :color="compareData.imports.usd === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
           :subtitle="`vs ${actualCompareYear}: ${formatUsd(compareData.imports.usd)}`"
+          :subtitle-click="() => nav.push(`/years/${actualCompareYear}`, `${c.name} — Imports`)"
         />
 
         <StatCard
           title="Share of World Imports"
           :value="formatPercent(worldShare)"
           :subtitle="`Year ${selectedYear}`"
+          :subtitle-click="() => nav.push(`/years/${selectedYear}`, `${c.name} — Imports`)"
         />
 
-      </div>
-
-      <!-- Row 2: top sources + evolution chart (fills remaining height) -->
-      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
-
-        <!-- Top 3 import sources -->
+        <!-- Top import sources -->
         <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Import Sources</h3>
-          <p class="text-xs text-[#93c5fd]/45">Year {{ selectedYear }}</p>
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Sources</h3>
+          <button @click="nav.push(`/years/${selectedYear}`, `${c.name} — Imports`)" class="text-[10px] text-[#93c5fd]/45 hover:text-[#93c5fd] transition-colors text-left">Year {{ selectedYear }}</button>
           <div v-if="tradeConnections" class="flex flex-col gap-1.5 mt-0.5">
             <div
               v-for="(pct, country) in tradeConnections.top3importers"
@@ -69,20 +66,20 @@
           <p v-else class="text-xs text-[#93c5fd]/40 mt-0.5">No data for {{ selectedYear }}</p>
         </div>
 
-        <!-- Evolution chart -->
-        <div class="col-span-3 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2">Import Evolution (1988–2016)</h3>
-          <div class="flex-1 min-h-0">
-            <D3BarChartRace
-              :series="[
-                { id: 'imports', label: 'Imports (USD)',    color: '#3b82f6', data: usdSeries },
-                { id: 'weight',  label: 'Imports (weight)', color: '#22c55e', data: weightSeries },
-              ]"
-              :format-value="formatUsd"
-            />
-          </div>
-        </div>
+      </div>
 
+      <!-- Row 2: full-width evolution chart -->
+      <div class="flex-1 min-h-0 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+        <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide mb-2 shrink-0">Import Evolution (1988–2016)</h3>
+        <div class="flex-1 min-h-0">
+          <D3BarChartRace
+            :series="[
+              { id: 'imports', label: 'Imports (USD)',    color: '#3b82f6', data: usdSeries },
+              { id: 'weight',  label: 'Imports (weight)', color: '#22c55e', data: weightSeries },
+            ]"
+            :format-value="formatUsd"
+          />
+        </div>
       </div>
     </div>
   </PageWindow>
