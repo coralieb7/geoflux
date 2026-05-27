@@ -1,38 +1,36 @@
 <template>
   <div
     :class="[
-      'rounded-xl p-5 flex flex-col gap-3 transition-colors',
-      clickable
-        ? 'bg-zinc-100 dark:bg-zinc-800 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700'
-        : 'bg-zinc-100 dark:bg-zinc-800',
+      'rounded-xl p-3 flex flex-col gap-1.5 transition-colors',
+      clickable ? 'bg-zinc-50 cursor-pointer hover:bg-zinc-100' : 'bg-zinc-50',
     ]"
     @click="clickable ? toggle() : undefined"
   >
     <!-- Title row -->
     <div class="flex items-center justify-between">
-      <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{{ title }}</h3>
-      <div class="flex items-center gap-2">
+      <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide leading-none">{{ title }}</h3>
+      <div class="flex items-center gap-1">
         <slot name="badge" />
         <UIcon
           v-if="expandable"
           :name="expanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'"
-          class="size-4 text-zinc-400"
+          class="size-3.5 text-zinc-400"
         />
       </div>
     </div>
 
     <!-- Primary value -->
-    <div v-if="value" :class="['text-3xl font-bold', colorClass]">{{ value }}</div>
+    <div v-if="value" :class="['text-xl font-bold leading-tight', colorClass]">{{ value }}</div>
 
     <!-- Subtitle -->
-    <p v-if="subtitle" class="text-xs text-zinc-500 dark:text-zinc-400">{{ subtitle }}</p>
+    <p v-if="subtitle" class="text-xs text-zinc-400 leading-none">{{ subtitle }}</p>
 
-    <!-- Always-visible body content -->
+    <!-- Always-visible body -->
     <slot name="body" />
 
     <!-- Expanded content -->
     <Transition name="expand">
-      <div v-if="expanded || !expandable" class="mt-1">
+      <div v-if="expanded || !expandable">
         <slot />
       </div>
     </Transition>
@@ -50,18 +48,17 @@ const props = defineProps<{
 }>()
 
 const expanded = ref(false)
-
 function toggle() {
   if (props.expandable) expanded.value = !expanded.value
 }
 
 const colorClass = computed(() => {
   switch (props.color) {
-    case 'blue':   return 'text-blue-600 dark:text-blue-400'
-    case 'orange': return 'text-orange-600 dark:text-orange-400'
-    case 'green':  return 'text-green-600 dark:text-green-400'
-    case 'red':    return 'text-red-600 dark:text-red-400'
-    default:       return 'text-zinc-800 dark:text-zinc-100'
+    case 'blue':   return 'text-blue-600'
+    case 'orange': return 'text-orange-500'
+    case 'green':  return 'text-green-600'
+    case 'red':    return 'text-red-500'
+    default:       return 'text-zinc-800'
   }
 })
 </script>
@@ -69,8 +66,8 @@ const colorClass = computed(() => {
 <style scoped>
 .expand-enter-active,
 .expand-leave-active {
-  transition: max-height 0.3s ease, opacity 0.3s ease;
-  max-height: 600px;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+  max-height: 200px;
   overflow: hidden;
 }
 .expand-enter-from,

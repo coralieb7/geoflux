@@ -1,95 +1,92 @@
 <template>
   <PageWindow :title="com.name">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="flex flex-col gap-2 h-full">
 
-      <!-- Category breadcrumb -->
-      <div class="col-span-1 md:col-span-2 lg:col-span-3">
+      <!-- Category link + year selector -->
+      <div class="flex items-center gap-3 shrink-0 px-1">
         <button
           @click="nav.push(`/categories/${categorySlug}`, com.name)"
-          class="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+          class="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-zinc-500 hover:text-zinc-700 hover:bg-zinc-100 transition-colors shrink-0"
         >
-          <UIcon name="i-heroicons-tag" class="size-4" />
-          Category: {{ com.category }}
+          <UIcon name="i-heroicons-tag" class="size-3.5" />
+          {{ com.category }}
         </button>
+        <span class="text-zinc-200 shrink-0">|</span>
+        <span class="text-xs font-medium text-zinc-400 shrink-0">Year</span>
+        <input
+          type="range"
+          :min="YEARS[0]"
+          :max="YEARS.at(-1)"
+          step="1"
+          v-model.number="selectedYear"
+          class="flex-1 accent-blue-500 h-1"
+        />
+        <span class="text-xs font-semibold text-zinc-600 w-9 text-right shrink-0">{{ selectedYear }}</span>
       </div>
 
-      <!-- Top importing countries -->
-      <div class="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Top Importing Countries</h3>
-        <div class="h-48">
-          <D3BarChart
-            :data="topImportersBar"
-            :format-value="formatUsd"
-            :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, com.name)"
-          />
+      <!-- Row 1: 4 stat cards -->
+      <div class="grid grid-cols-4 gap-2 shrink-0">
+
+        <StatCard
+          title="Trade Value (USD)"
+          :value="formatUsd(selectedYearData.imports.usd + selectedYearData.exports.usd)"
+          :subtitle="`Year ${selectedYear}`"
+        />
+
+        <StatCard
+          title="Trade Volume"
+          :value="formatWeight(selectedYearData.imports.weight + selectedYearData.exports.weight)"
+          :subtitle="`Year ${selectedYear}`"
+        />
+
+        <StatCard
+          title="10-Year Trend"
+          :value="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'N/A' : formatGrowth(trendGrowth)"
+          :color="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
+          :subtitle="`vs ${actualCompareYear}`"
+        />
+
+        <StatCard
+          title="Share of Category"
+          :value="formatPercent(categoryShare)"
+          :subtitle="com.category"
+        />
+
+      </div>
+
+      <!-- Row 2: bar charts + evolution chart -->
+      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
+
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
+          <div class="flex-1 min-h-0">
+            <D3BarChart
+              :data="topImportersBar"
+              :format-value="formatUsd"
+              :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, com.name)"
+            />
+          </div>
         </div>
-      </div>
 
-      <!-- Top exporting countries -->
-      <div class="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Top Exporting Countries</h3>
-        <div class="h-48">
-          <D3BarChart
-            :data="topExportersBar"
-            :format-value="formatUsd"
-            :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, com.name)"
-          />
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Exporters</h3>
+          <div class="flex-1 min-h-0">
+            <D3BarChart
+              :data="topExportersBar"
+              :format-value="formatUsd"
+              :on-bar-click="d => nav.push(`/countries/${isoFromName(d.label)}`, com.name)"
+            />
+          </div>
         </div>
-      </div>
 
-      <!-- Value in USD -->
-      <StatCard
-        title="Trade Value (USD)"
-        :value="formatUsd(selectedYearData.imports.usd + selectedYearData.exports.usd)"
-        :subtitle="`Year: ${selectedYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
-
-      <!-- Value in weight -->
-      <StatCard
-        title="Trade Volume (Weight)"
-        :value="formatWeight(selectedYearData.imports.weight + selectedYearData.exports.weight)"
-        :subtitle="`Year: ${selectedYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
-
-      <!-- 10-Year trend -->
-      <StatCard
-        title="10-Year Trend"
-        :value="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'N/A' : formatGrowth(trendGrowth)"
-        :color="(compareData.imports.usd + compareData.exports.usd) === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
-        :subtitle="`Compared to ${actualCompareYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
-
-      <!-- Share of category trade -->
-      <StatCard
-        title="Share of Category Trade"
-        :value="formatPercent(categoryShare)"
-        :subtitle="com.category"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
-
-      <!-- Evolution chart -->
-      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5 min-h-100 flex flex-col">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Evolution Over Time</h3>
-        <div class="h-64 flex-1 w-full flex flex-col bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-          <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
+        <div class="col-span-2 bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
+          <div class="flex-1 min-h-0">
+            <D3BarChartRace :series="evolutionSeries" :format-value="formatUsd" />
+          </div>
         </div>
-      </div>
 
+      </div>
     </div>
   </PageWindow>
 </template>
@@ -119,8 +116,8 @@ const selectedYear     = ref(YEARS.at(-1) ?? 2016)
 const selectedYearData = computed(() => series.value.find(p => p.year === selectedYear.value) ?? series.value.at(-1)!)
 const catYearData      = computed(() => catSeries.value.find(p => p.year === selectedYear.value) ?? catSeries.value.at(-1)!)
 
-// 10-Year Trend logic
-const targetCompareYear = computed(() => Math.max(1988, selectedYear.value - 10))
+// 10-Year Trend
+const targetCompareYear = computed(() => Math.max(YEARS[0] ?? 1988, selectedYear.value - 10))
 const compareData = computed(() => {
   const past = series.value.filter(p => p.year <= targetCompareYear.value)
   return past.length ? past.at(-1)! : series.value.at(0)!
@@ -128,7 +125,7 @@ const compareData = computed(() => {
 const actualCompareYear = computed(() => compareData.value.year)
 
 const trendGrowth = computed(() => {
-  const base = compareData.value.imports.usd + compareData.value.exports.usd
+  const base    = compareData.value.imports.usd + compareData.value.exports.usd
   const current = selectedYearData.value.imports.usd + selectedYearData.value.exports.usd
   return base === 0 ? 0 : ((current - base) / base) * 100
 })
@@ -149,7 +146,7 @@ const catExportTotal = computed(() =>
 const topImporters = computed(() =>
   [...TRADE_DATA]
     .map(c => {
-      const catUsd  = c.byCategory[com.value.category]?.imports.usd ?? 0
+      const catUsd   = c.byCategory[com.value.category]?.imports.usd ?? 0
       const fraction = catImportTotal.value > 0 ? com.value.imports.usd / catImportTotal.value : 0
       return { name: c.name, iso3: c.iso3, usd: Math.round(catUsd * fraction) }
     })

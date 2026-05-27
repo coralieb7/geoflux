@@ -1,6 +1,6 @@
 <!-- app/components/d3/BarChartRace.vue -->
 <template>
-  <div class="flex flex-col w-full h-full min-h-65 text-zinc-800 dark:text-zinc-200">
+  <div class="flex flex-col w-full h-full min-h-0 text-zinc-800">
     <div ref="container" class="flex-1 relative overflow-hidden" />
     <div class="flex items-center gap-3 mt-2 px-1">
       <button @click="togglePlay" class="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors">

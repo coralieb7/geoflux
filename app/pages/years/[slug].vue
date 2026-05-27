@@ -1,109 +1,122 @@
 <template>
   <PageWindow :title="String(year)">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="flex flex-col gap-2 h-full">
 
-      <!-- Import totals -->
-      <StatCard
-        title="Total Imports (USD)"
-        :value="formatUsd(snapshot.totalImports.usd)"
-        color="blue"
-        :subtitle="formatWeight(snapshot.totalImports.weight) + ' by weight'"
-      />
+      <!-- Row 1: top-level stats + compare year -->
+      <div class="grid grid-cols-4 gap-2 shrink-0">
 
-      <!-- Export totals -->
-      <StatCard
-        title="Total Exports (USD)"
-        :value="formatUsd(snapshot.totalExports.usd)"
-        color="orange"
-        :subtitle="formatWeight(snapshot.totalExports.weight) + ' by weight'"
-      />
+        <StatCard
+          title="Total Imports"
+          :value="formatUsd(snapshot.totalImports.usd)"
+          color="blue"
+          :subtitle="formatWeight(snapshot.totalImports.weight)"
+        />
 
-      <!-- Difference vs another year (expandable) -->
-      <StatCard
-        title="Difference vs. Another Year"
-        :value="formatGrowth(diffPercent)"
-        :color="diffPercent >= 0 ? 'green' : 'red'"
-        :subtitle="`Compared to ${compareYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="compareYear" />
-        <p class="text-xs text-zinc-500 mt-2">
-          {{ formatUsd(compareSnapshot.totalImports.usd + compareSnapshot.totalExports.usd) }} in {{ compareYear }}
-          → {{ formatUsd(snapshot.totalImports.usd + snapshot.totalExports.usd) }} in {{ year }}
+        <StatCard
+          title="Total Exports"
+          :value="formatUsd(snapshot.totalExports.usd)"
+          color="orange"
+          :subtitle="formatWeight(snapshot.totalExports.weight)"
+        />
+
+        <!-- Comparison year (expandable to pick year) -->
+        <StatCard
+          title="vs. Another Year"
+          :value="formatGrowth(diffPercent)"
+          :color="diffPercent >= 0 ? 'green' : 'red'"
+          :subtitle="`Compared to ${compareYear}`"
+          expandable
+          clickable
+        >
+          <div class="mt-1">
+            <YearSlider v-model="compareYear" />
+          </div>
+        </StatCard>
+
+        <!-- Balance -->
+        <StatCard
+          title="Trade Balance"
+          :value="formatUsd(snapshot.totalExports.usd - snapshot.totalImports.usd)"
+          :color="(snapshot.totalExports.usd - snapshot.totalImports.usd) >= 0 ? 'orange' : 'blue'"
+          subtitle="Exports − Imports"
+        />
+
+      </div>
+
+      <!-- Row 2: top categories + top countries (fills remaining height) -->
+      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
+
+        <!-- Top import categories -->
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Import Categories</h3>
+          <div class="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
+            <div
+              v-for="cat in snapshot.topImportCategories"
+              :key="cat.name"
+              @click="nav.push(`/categories/${categoryToSlug(cat.name)}`, String(year))"
+              class="flex items-center justify-between p-2 rounded-lg bg-white hover:bg-zinc-100 border border-zinc-100 cursor-pointer transition-colors"
+            >
+              <span class="text-xs font-medium text-zinc-700 truncate">{{ cat.name }}</span>
+              <span class="text-xs font-semibold text-blue-500 shrink-0 ml-1">{{ formatUsd(cat.usd) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top export categories -->
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Export Categories</h3>
+          <div class="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
+            <div
+              v-for="cat in snapshot.topExportCategories"
+              :key="cat.name"
+              @click="nav.push(`/categories/${categoryToSlug(cat.name)}`, String(year))"
+              class="flex items-center justify-between p-2 rounded-lg bg-white hover:bg-zinc-100 border border-zinc-100 cursor-pointer transition-colors"
+            >
+              <span class="text-xs font-medium text-zinc-700 truncate">{{ cat.name }}</span>
+              <span class="text-xs font-semibold text-orange-500 shrink-0 ml-1">{{ formatUsd(cat.usd) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top importing countries -->
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Importing Countries</h3>
+          <div class="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
+            <div
+              v-for="c in snapshot.topImportCountries"
+              :key="c.iso3"
+              @click="nav.push(`/countries/${c.iso3.toLowerCase()}`, String(year))"
+              class="flex items-center justify-between p-2 rounded-lg bg-white hover:bg-zinc-100 border border-zinc-100 cursor-pointer transition-colors"
+            >
+              <span class="text-xs font-medium text-zinc-700 truncate">{{ c.name }}</span>
+              <span class="text-xs font-semibold text-blue-500 shrink-0 ml-1">{{ formatUsd(c.usd) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top exporting countries -->
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Exporting Countries</h3>
+          <div class="flex flex-col gap-1 overflow-y-auto flex-1 min-h-0">
+            <div
+              v-for="c in snapshot.topExportCountries"
+              :key="c.iso3"
+              @click="nav.push(`/countries/${c.iso3.toLowerCase()}`, String(year))"
+              class="flex items-center justify-between p-2 rounded-lg bg-white hover:bg-zinc-100 border border-zinc-100 cursor-pointer transition-colors"
+            >
+              <span class="text-xs font-medium text-zinc-700 truncate">{{ c.name }}</span>
+              <span class="text-xs font-semibold text-orange-500 shrink-0 ml-1">{{ formatUsd(c.usd) }}</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Row 3: historical context (compact strip) -->
+      <div class="shrink-0 bg-zinc-50 rounded-xl px-3 py-2">
+        <p class="text-xs text-zinc-500 leading-relaxed">
+          <span class="font-semibold text-zinc-600">Historical context: </span>{{ snapshot.historicalNote }}
         </p>
-      </StatCard>
-
-      <!-- Top import categories -->
-      <div class="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Top Import Categories</h3>
-        <div class="flex flex-col gap-2">
-          <div
-            v-for="cat in snapshot.topImportCategories"
-            :key="cat.name"
-            @click="nav.push(`/categories/${categoryToSlug(cat.name)}`, String(year))"
-            class="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
-          >
-            <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ cat.name }}</span>
-            <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">{{ formatUsd(cat.usd) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Top export categories -->
-      <div class="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Top Export Categories</h3>
-        <div class="flex flex-col gap-2">
-          <div
-            v-for="cat in snapshot.topExportCategories"
-            :key="cat.name"
-            @click="nav.push(`/categories/${categoryToSlug(cat.name)}`, String(year))"
-            class="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
-          >
-            <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ cat.name }}</span>
-            <span class="text-sm font-semibold text-orange-600 dark:text-orange-400">{{ formatUsd(cat.usd) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Top importing countries -->
-      <div class="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Top Importing Countries</h3>
-        <div class="flex flex-col gap-2">
-          <div
-            v-for="c in snapshot.topImportCountries"
-            :key="c.iso3"
-            @click="nav.push(`/countries/${c.iso3.toLowerCase()}`, String(year))"
-            class="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
-          >
-            <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ c.name }}</span>
-            <span class="text-sm font-semibold text-blue-600 dark:text-blue-400">{{ formatUsd(c.usd) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Top exporting countries -->
-      <div class="bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Top Exporting Countries</h3>
-        <div class="flex flex-col gap-2">
-          <div
-            v-for="c in snapshot.topExportCountries"
-            :key="c.iso3"
-            @click="nav.push(`/countries/${c.iso3.toLowerCase()}`, String(year))"
-            class="flex items-center justify-between p-2.5 rounded-lg bg-white dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-zinc-700 cursor-pointer transition-colors"
-          >
-            <span class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ c.name }}</span>
-            <span class="text-sm font-semibold text-orange-600 dark:text-orange-400">{{ formatUsd(c.usd) }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Historical note -->
-      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">
-          Historical Context
-        </h3>
-        <p class="text-zinc-700 dark:text-zinc-300 leading-relaxed">{{ snapshot.historicalNote }}</p>
       </div>
 
     </div>

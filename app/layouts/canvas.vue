@@ -31,6 +31,22 @@ const isHovering = ref(false)
 const { clearTradeConnections, showAllTradeConnections, updateTradeConnections } =
   useTradeConnections(() => map)
 
+// Flag: set true when click handler already triggered flyTo so the route watcher skips it
+let mapClickDidFlyTo = false
+
+// ─── ISO3 resolution ──────────────────────────────────────────────────────────
+// Some countries (France, Norway) have "-99" as their ISO3166-1-Alpha-3 code in
+// the GeoJSON. Fall back to matching by feature name against TRADE_DATA.
+function resolveIso3(props: Record<string, any>): string | null {
+  const raw = props['ISO3166-1-Alpha-3']
+  if (raw && raw !== '-99') return (raw as string).toUpperCase()
+
+  // Fallback: match by country name
+  const name: string | undefined = props.name || props.NAME || props.ADMIN
+  if (!name) return null
+  return TRADE_DATA.find(c => c.name === name)?.iso3.toUpperCase() ?? null
+}
+
 // ─── Map visuals ──────────────────────────────────────────────────────────────
 
 function updateMapVisuals() {
@@ -74,14 +90,16 @@ function updateMapVisuals() {
 
 function setupInteractions(m: mapboxgl.Map) {
   let hoveredId: number | string | null = null
+  let isNavigating = false
 
   m.on('mousemove', 'country-fills', (e) => {
     if (route.path !== '/') return
     if (!e.features?.length) return
 
     const props = e.features[0]?.properties
-    const iso3 = props ? (props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3) : null
-    const hasData = iso3 ? TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3.toUpperCase()) : false
+    if (!props) return
+    const iso3 = resolveIso3(props)
+    const hasData = iso3 ? TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3) : false
 
     if (hoveredId !== null) m.setFeatureState({ source: 'countries', id: hoveredId }, { hover: false })
 
@@ -92,7 +110,8 @@ function setupInteractions(m: mapboxgl.Map) {
 
       if (!showFlows.value) {
         isHovering.value = true
-        if (props) updateTradeConnections(props.name ?? '', props['ISO3166-1-Alpha-3'] ?? '')
+        // Pass the resolved iso3 so trade connections work for France/Norway too
+        updateTradeConnections(props.name ?? '', iso3 ?? '')
       }
     } else {
       hoveredId = null
@@ -115,15 +134,26 @@ function setupInteractions(m: mapboxgl.Map) {
   })
 
   m.on('click', 'country-fills', (e) => {
-    if (route.path !== '/') return
+    if (route.path !== '/' || isNavigating) return
     if (!e.features?.length) return
     const props = e.features[0]?.properties
     if (!props) return
-    const iso3 = props['ISO3166-1-Alpha-3'] || props.iso3 || props.ISO_A3
-    if (iso3) {
-      const hasData = TRADE_DATA.some(c => c.iso3.toUpperCase() === iso3.toUpperCase())
-      if (hasData) router.push(`/countries/${iso3.toLowerCase()}`)
-    }
+
+    const iso3 = resolveIso3(props)
+    if (!iso3) return
+
+    const country = TRADE_DATA.find(c => c.iso3.toUpperCase() === iso3)
+    if (!country) return
+
+    isNavigating = true
+    mapClickDidFlyTo = true  // tell the route watcher not to duplicate the flyTo
+
+    // Zoom into the country, then navigate after a short delay
+    m.flyTo({ center: [country.lng, country.lat], zoom: 3.5, duration: 1800, essential: true })
+    setTimeout(() => {
+      router.push(`/countries/${iso3.toLowerCase()}`)
+      isNavigating = false
+    }, 650)
   })
 }
 
@@ -156,7 +186,6 @@ onMounted(async () => {
   map = m
 
   m.on('load', () => {
-    // Countries fill layers
     m.addSource('countries', { type: 'geojson', data: '/geojson/countries.geojson', generateId: true })
     m.addLayer({
       id: 'country-fills',
@@ -178,7 +207,6 @@ onMounted(async () => {
       },
     }, 'waterway-label')
 
-    // Dynamic trade-connection layers (populated on hover / showFlows)
     const emptyFC = { type: 'FeatureCollection' as const, features: [] }
     m.addSource('trade-connection-lines', { type: 'geojson', data: emptyFC })
     m.addSource('trade-connection-dots',  { type: 'geojson', data: emptyFC })
@@ -213,12 +241,36 @@ onMounted(async () => {
     updateMapVisuals()
   })
 
+  // Enable/disable map interaction based on whether we're on the home page
   watch(() => route.path, (path) => {
     const enable = path === '/'
     m.dragPan   [enable ? 'enable' : 'disable']()
     m.scrollZoom[enable ? 'enable' : 'disable']()
     m.dragRotate[enable ? 'enable' : 'disable']()
   }, { immediate: true })
+
+  // FlyTo whenever navigating to any country/imports/exports page.
+  // Skips if the map click handler already triggered the flyTo.
+  watch(() => route.path, (newPath, oldPath) => {
+    // If the click handler already kicked off a flyTo, consume the flag and skip
+    if (mapClickDidFlyTo) {
+      mapClickDidFlyTo = false
+      return
+    }
+
+    const newMatch = newPath.match(/^\/(countries|imports|exports)\/([^/]+)$/)
+    const oldMatch = oldPath?.match(/^\/(countries|imports|exports)\/([^/]+)$/)
+    if (!newMatch) return
+
+    const newIso3 = newMatch[2]!.toUpperCase()
+    const oldIso3 = oldMatch?.[2]?.toUpperCase()
+    if (newIso3 === oldIso3) return  // same country, no need to move
+
+    const country = TRADE_DATA.find(c => c.iso3.toUpperCase() === newIso3)
+    if (country && m.isStyleLoaded()) {
+      m.flyTo({ center: [country.lng, country.lat], zoom: 3, duration: 1500 })
+    }
+  })
 
   watch(colorMode, (mode) => {
     m.setStyle(mode.value === 'dark' ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11')

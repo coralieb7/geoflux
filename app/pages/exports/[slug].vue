@@ -1,94 +1,85 @@
 <template>
-  <PageWindow :title="`${c.name} Exports`">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <PageWindow :title="`${c.name} — Exports`">
+    <div class="flex flex-col gap-2 h-full">
 
-      <!-- Value in USD -->
-      <StatCard
-        title="Export Value (USD)"
-        :value="formatUsd(selectedYearData.exports.usd)"
-        color="orange"
-        :subtitle="`Year: ${selectedYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
+      <!-- Global year selector -->
+      <div class="flex items-center gap-3 shrink-0 px-1">
+        <span class="text-xs font-medium text-zinc-400 shrink-0">Year</span>
+        <input
+          type="range"
+          :min="YEARS[0]"
+          :max="YEARS.at(-1)"
+          step="1"
+          v-model.number="selectedYear"
+          class="flex-1 accent-orange-500 h-1"
+        />
+        <span class="text-xs font-semibold text-zinc-600 w-9 text-right shrink-0">{{ selectedYear }}</span>
+      </div>
 
-      <!-- Value in weight -->
-      <StatCard
-        title="Export Volume (Weight)"
-        :value="formatWeight(selectedYearData.exports.weight)"
-        :subtitle="`Year: ${selectedYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
+      <!-- Row 1: 4 stat cards -->
+      <div class="grid grid-cols-4 gap-2 shrink-0">
 
-      <!-- 10-Year trend -->
-      <StatCard
-        title="10-Year Trend"
-        :value="compareData.exports.usd === 0 ? 'N/A' : formatGrowth(trendGrowth)"
-        :color="compareData.exports.usd === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
-        :subtitle="`Compared to ${actualCompareYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-        <p class="text-xs text-zinc-500 mt-2">
-          From {{ formatUsd(compareData.exports.usd) }} in {{ actualCompareYear }} to {{ formatUsd(selectedYearData.exports.usd) }} in {{ selectedYear }}
-        </p>
-      </StatCard>
+        <StatCard
+          title="Export Value (USD)"
+          :value="formatUsd(selectedYearData.exports.usd)"
+          color="orange"
+        />
 
-      <!-- Share of world exports -->
-      <StatCard
-        title="Share of World Exports"
-        :value="formatPercent(worldShare)"
-        :subtitle="`Year: ${selectedYear}`"
-        expandable
-        clickable
-      >
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
+        <StatCard
+          title="Export Volume"
+          :value="formatWeight(selectedYearData.exports.weight)"
+        />
 
-      <!-- Top 3 export destinations -->
-      <StatCard
-        title="Top 3 Export Destinations"
-        color="orange"
-        :subtitle="`Year: ${selectedYear}`"
-        expandable
-        clickable
-      >
-        <template #body>
-          <div v-if="tradeConnections" class="flex flex-col gap-2">
+        <StatCard
+          title="10-Year Trend"
+          :value="compareData.exports.usd === 0 ? 'N/A' : formatGrowth(trendGrowth)"
+          :color="compareData.exports.usd === 0 ? 'default' : (trendGrowth >= 0 ? 'green' : 'red')"
+          :subtitle="`vs ${actualCompareYear}: ${formatUsd(compareData.exports.usd)}`"
+        />
+
+        <StatCard
+          title="Share of World Exports"
+          :value="formatPercent(worldShare)"
+          :subtitle="`Year ${selectedYear}`"
+        />
+
+      </div>
+
+      <!-- Row 2: top destinations + evolution chart -->
+      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
+
+        <!-- Top 3 export destinations -->
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col gap-1.5">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide leading-none">Top Destinations</h3>
+          <p class="text-xs text-zinc-400">Year {{ selectedYear }}</p>
+          <div v-if="tradeConnections" class="flex flex-col gap-1.5 mt-0.5">
             <div
               v-for="(pct, country) in tradeConnections.top3exportCountries"
               :key="country"
               class="flex items-center justify-between"
             >
-              <span class="text-sm text-zinc-700 dark:text-zinc-300">{{ iso3ToName(country) }}</span>
-              <span class="text-sm font-semibold text-orange-600 dark:text-orange-400">{{ pct.toFixed(1) }}%</span>
+              <span class="text-xs text-zinc-600 truncate">{{ iso3ToName(country) }}</span>
+              <span class="text-xs font-semibold text-orange-500 shrink-0 ml-1">{{ pct.toFixed(1) }}%</span>
             </div>
           </div>
-          <p v-else class="text-sm text-zinc-400">No data available for {{ selectedYear }}</p>
-        </template>
-        <YearSlider v-model="selectedYear" />
-      </StatCard>
-
-      <!-- Evolution chart -->
-      <div class="col-span-1 md:col-span-2 lg:col-span-3 bg-zinc-100 dark:bg-zinc-800 rounded-xl p-5 min-h-100 flex flex-col">
-        <h3 class="text-sm font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wide mb-3">Export Evolution (1988–2023)</h3>
-        <div class="h-64 flex-1 w-full flex flex-col bg-white dark:bg-zinc-900 rounded-lg border border-zinc-200 dark:border-zinc-700 p-3">
-          <D3BarChartRace
-            :series="[
-              { id: 'exports', label: 'Exports (USD)',    color: '#f97316', data: usdSeries },
-              { id: 'weight',  label: 'Exports (weight)', color: '#a855f7', data: weightSeries },
-            ]"
-            :format-value="formatUsd"
-          />
+          <p v-else class="text-xs text-zinc-400 mt-0.5">No data for {{ selectedYear }}</p>
         </div>
-      </div>
 
+        <!-- Evolution chart -->
+        <div class="col-span-3 bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Export Evolution (1988–2016)</h3>
+          <div class="flex-1 min-h-0">
+            <D3BarChartRace
+              :series="[
+                { id: 'exports', label: 'Exports (USD)',    color: '#f97316', data: usdSeries },
+                { id: 'weight',  label: 'Exports (weight)', color: '#a855f7', data: weightSeries },
+              ]"
+              :format-value="formatUsd"
+            />
+          </div>
+        </div>
+
+      </div>
     </div>
   </PageWindow>
 </template>
@@ -115,8 +106,8 @@ const series = computed(() => getCountryYearlySeries(c.value))
 const selectedYear     = ref(YEARS.at(-1) ?? 2016)
 const selectedYearData = computed(() => series.value.find(p => p.year === selectedYear.value) ?? series.value.at(-1)!)
 
-// 10-Year Trend logic
-const targetCompareYear = computed(() => Math.max(1988, selectedYear.value - 10))
+// 10-Year Trend
+const targetCompareYear = computed(() => Math.max(YEARS[0] ?? 1988, selectedYear.value - 10))
 const compareData = computed(() => {
   const past = series.value.filter(p => p.year <= targetCompareYear.value)
   return past.length ? past.at(-1)! : series.value.at(0)!
@@ -124,7 +115,7 @@ const compareData = computed(() => {
 const actualCompareYear = computed(() => compareData.value.year)
 
 const trendGrowth = computed(() => {
-  const base = compareData.value.exports.usd
+  const base    = compareData.value.exports.usd
   const current = selectedYearData.value.exports.usd
   return base === 0 ? 0 : ((current - base) / base) * 100
 })
