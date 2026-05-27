@@ -110,6 +110,28 @@ export function valueToColor(value: number, max: number, type: 'imports' | 'expo
   }
 }
 
+// ─── Supply barometer ─────────────────────────────────────────────────────
+
+/** Number of countries that export at least some of this trade category. */
+export function countCategoryExporters(categoryName: string): number {
+  return TRADE_DATA.filter(c => (c.byCategory[categoryName]?.exports.usd ?? 0) > 0).length
+}
+
+export type BarometerLevel = 'high' | 'medium' | 'low'
+
+/**
+ * Converts an exporter count into a barometer level relative to TRADE_DATA size.
+ *  > 50% of countries → high (green)
+ *  ≥ 25% of countries → medium (amber)
+ *  < 25% of countries → low (red)
+ */
+export function getBarometerLevel(count: number): BarometerLevel {
+  const pct = count / TRADE_DATA.length
+  if (pct > 0.5)  return 'high'
+  if (pct >= 0.25) return 'medium'
+  return 'low'
+}
+
 // ─── Search index ──────────────────────────────────────────────────────────
 
 export const SEARCH_ITEMS: SearchItem[] = [

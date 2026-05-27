@@ -52,8 +52,8 @@
         >{{ selectedYear }}</button>
       </div>
 
-      <!-- Row 1: 4 stat cards -->
-      <div class="grid grid-cols-4 gap-2 shrink-0">
+      <!-- Row 1: 5 stat cards -->
+      <div class="grid grid-cols-5 gap-2 shrink-0">
 
         <StatCard
           title="Trade Value (USD)"
@@ -82,6 +82,23 @@
           :value="formatPercent(categoryShare)"
           :subtitle="com.category"
         />
+
+        <!-- Supply Barometer -->
+        <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20">
+          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Supply Barometer</h3>
+          <div class="h-1.5 rounded-full bg-[#1a3a5c] overflow-hidden mt-0.5">
+            <div
+              class="h-full rounded-full transition-all duration-500"
+              :class="barometerBarColor"
+              :style="{ width: `${barometerPct}%` }"
+            />
+          </div>
+          <div class="flex items-end gap-1.5 mt-0.5">
+            <span class="text-xl font-bold leading-none" :class="barometerValueColor">{{ supplierCount }}</span>
+            <span class="text-xs text-[#93c5fd]/45 pb-px">/ {{ TOTAL_COUNTRIES }} countries</span>
+          </div>
+          <p class="text-[10px] leading-none" :class="barometerValueColor">{{ barometerLabel }}</p>
+        </div>
 
       </div>
 
@@ -135,7 +152,7 @@
 </template>
 
 <script setup lang="ts">
-import { TRADE_DATA, YEARS } from '~/utils/dummyData'
+import { TRADE_DATA, YEARS, countCategoryExporters, getBarometerLevel } from '~/utils/dummyData'
 import { getCommodityById, getCommodityYearlySeries, getCategoryYearlySeries } from '~/utils/tradeExtended'
 import { formatUsd, formatWeight, formatGrowth, formatPercent, categoryToSlug } from '~/utils/formatters'
 import { useNavHistory } from '~/composables/useNavHistory'
@@ -222,6 +239,27 @@ const evolutionSeries = computed(() => [
   { id: 'imports', label: 'Imports', color: '#3b82f6', data: series.value.map(p => ({ year: p.year, value: p.imports.usd })) },
   { id: 'exports', label: 'Exports', color: '#f97316', data: series.value.map(p => ({ year: p.year, value: p.exports.usd })) },
 ])
+
+// ── Supply barometer (uses parent category exporter count) ─────────────────
+const TOTAL_COUNTRIES   = TRADE_DATA.length
+const supplierCount     = computed(() => countCategoryExporters(com.value.category))
+const barometerPct      = computed(() => (supplierCount.value / TOTAL_COUNTRIES) * 100)
+const barometerLevel    = computed(() => getBarometerLevel(supplierCount.value))
+const barometerBarColor = computed(() => ({
+  'bg-emerald-500': barometerLevel.value === 'high',
+  'bg-amber-400':   barometerLevel.value === 'medium',
+  'bg-red-500':     barometerLevel.value === 'low',
+}))
+const barometerValueColor = computed(() => ({
+  'text-emerald-400': barometerLevel.value === 'high',
+  'text-amber-400':   barometerLevel.value === 'medium',
+  'text-red-400':     barometerLevel.value === 'low',
+}))
+const barometerLabel = computed(() =>
+  barometerLevel.value === 'high'   ? 'Globally supplied'
+  : barometerLevel.value === 'medium' ? 'Moderately supplied'
+  : 'Supply concentrated'
+)
 </script>
 
 <style scoped>

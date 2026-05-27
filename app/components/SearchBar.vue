@@ -47,6 +47,21 @@
           >
             <UIcon :name="group.icon" class="size-4 shrink-0" :class="group.iconColor" />
             <span class="flex-1 text-sm text-white/80 truncate" v-html="highlight(item.label)" />
+
+            <!-- Supply barometer badge for categories and commodities -->
+            <span
+              v-if="item.supplierCount !== undefined"
+              class="shrink-0 flex items-center gap-1"
+              :title="`${item.supplierCount} of ${TOTAL_COUNTRIES} countries export this`"
+            >
+              <span
+                class="size-2 rounded-full inline-block"
+                :class="barometerDot(item.supplierCount)"
+              />
+              <span class="text-[10px] tabular-nums" :class="barometerText(item.supplierCount)">
+                {{ item.supplierCount }}<span class="text-white/25">/{{ TOTAL_COUNTRIES }}</span>
+              </span>
+            </span>
           </button>
         </template>
       </div>
@@ -66,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { TRADE_DATA, CATEGORIES, YEARS } from '~/utils/dummyData'
+import { TRADE_DATA, CATEGORIES, YEARS, countCategoryExporters, getBarometerLevel } from '~/utils/dummyData'
 import { COMMODITIES } from '~/utils/tradeExtended'
 import { categoryToSlug } from '~/utils/formatters'
 
@@ -77,7 +92,9 @@ const root      = ref<HTMLElement | null>(null)
 const inputEl   = ref<HTMLInputElement | null>(null)
 const flatIndex = ref(-1)
 
-interface Item  { label: string; path: string }
+const TOTAL_COUNTRIES = TRADE_DATA.length
+
+interface Item  { label: string; path: string; supplierCount?: number }
 interface Group { type: string; label: string; icon: string; iconColor: string; items: Item[] }
 
 const MAX_PER_GROUP = 5
@@ -105,7 +122,11 @@ const results = computed<Group[]>(() => {
       items: CATEGORIES
         .filter(cat => cat.toLowerCase().includes(q))
         .slice(0, MAX_PER_GROUP)
-        .map(cat => ({ label: cat, path: `/categories/${categoryToSlug(cat)}` })),
+        .map(cat => ({
+          label: cat,
+          path: `/categories/${categoryToSlug(cat)}`,
+          supplierCount: countCategoryExporters(cat),
+        })),
     },
     {
       type: 'commodities',
@@ -115,7 +136,11 @@ const results = computed<Group[]>(() => {
       items: COMMODITIES
         .filter(c => c.name.toLowerCase().includes(q))
         .slice(0, MAX_PER_GROUP)
-        .map(c => ({ label: c.name, path: `/commodities/${c.id}` })),
+        .map(c => ({
+          label: c.name,
+          path: `/commodities/${c.id}`,
+          supplierCount: countCategoryExporters(c.category),
+        })),
     },
     {
       type: 'years',
@@ -166,6 +191,20 @@ function navigate(path: string) {
 function clear() {
   query.value  = ''
   flatIndex.value = -1
+}
+
+// Barometer badge colors
+function barometerDot(count: number): string {
+  const level = getBarometerLevel(count)
+  if (level === 'high')   return 'bg-emerald-400'
+  if (level === 'medium') return 'bg-amber-400'
+  return 'bg-red-400'
+}
+function barometerText(count: number): string {
+  const level = getBarometerLevel(count)
+  if (level === 'high')   return 'text-emerald-400/80'
+  if (level === 'medium') return 'text-amber-400/80'
+  return 'text-red-400/80'
 }
 
 // Bold the matching substring
