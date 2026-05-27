@@ -75,37 +75,58 @@ export interface ConnectionFeatures {
 }
 
 // Builds GeoJSON features for import/export arcs and partner dots.
+// importers / exporters: Map<iso3Upper, usdValue>
+// Stores tooltip metadata (homeName, partnerName, year, value) in feature properties.
 // Pure — does not touch the map.
 export function buildConnectionFeatures(
   hLngLat:   [number, number],
-  importers:  Set<string>,
-  exporters:  Set<string>,
+  importers:  Map<string, number>,   // iso3 → USD value (0 if unknown)
+  exporters:  Map<string, number>,
+  homeName  = '',
+  year: number | string = '',
 ): ConnectionFeatures {
   const lines: GeoJSON.Feature[] = []
   const dots:  GeoJSON.Feature[] = []
 
-  for (const partner of new Set([...importers, ...exporters])) {
+  const allPartners = new Set([...importers.keys(), ...exporters.keys()])
+
+  for (const partner of allPartners) {
     const partnerLngLat = getPartnerLngLat(partner)
     if (!partnerLngLat) continue
 
-    const isImport = importers.has(partner)
-    const isExport = exporters.has(partner)
-    const flowType = isImport && isExport ? 'both' : isImport ? 'import' : 'export'
+    const isImport   = importers.has(partner)
+    const isExport   = exporters.has(partner)
+    const flowType   = isImport && isExport ? 'both' : isImport ? 'import' : 'export'
+    const partnerName = TRADE_DATA.find(c => c.iso3.toUpperCase() === partner)?.name ?? partner
 
     dots.push({
-      type: 'Feature',
-      geometry: { type: 'Point', coordinates: partnerLngLat },
-      properties: { flowType },
+      type:       'Feature',
+      geometry:   { type: 'Point', coordinates: partnerLngLat },
+      properties: { flowType, partnerName, homeName, year: String(year) },
     })
+
     if (isImport) lines.push({
-      type: 'Feature',
+      type:     'Feature',
       geometry: { type: 'LineString', coordinates: greatCircleArc(partnerLngLat, hLngLat) },
-      properties: { flowType },
+      properties: {
+        flowType:    'import',
+        homeName,
+        partnerName,
+        year:        String(year),
+        value:       importers.get(partner) ?? 0,
+      },
     })
+
     if (isExport) lines.push({
-      type: 'Feature',
+      type:     'Feature',
       geometry: { type: 'LineString', coordinates: greatCircleArc(hLngLat, partnerLngLat) },
-      properties: { flowType },
+      properties: {
+        flowType:    'export',
+        homeName,
+        partnerName,
+        year:        String(year),
+        value:       exporters.get(partner) ?? 0,
+      },
     })
   }
 

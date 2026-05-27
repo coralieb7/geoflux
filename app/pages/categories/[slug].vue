@@ -13,7 +13,11 @@
           v-model.number="selectedYear"
           class="flex-1 accent-blue-500 h-1"
         />
-        <span class="text-xs font-semibold text-zinc-600 w-9 text-right shrink-0">{{ selectedYear }}</span>
+        <button
+          @click="nav.push(`/years/${selectedYear}`, category)"
+          class="text-xs font-semibold text-zinc-500 hover:text-blue-500 w-9 text-right shrink-0 transition-colors"
+          title="Open year page"
+        >{{ selectedYear }}</button>
       </div>
 
       <!-- Row 1: 4 stat cards -->
@@ -46,8 +50,8 @@
 
       </div>
 
-      <!-- Row 2: bar charts + evolution chart -->
-      <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
+      <!-- Row 2: bar charts + commodity pie + evolution (fills remaining height) -->
+      <div class="grid grid-cols-5 gap-2 flex-1 min-h-0">
 
         <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
           <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Top Importers</h3>
@@ -71,6 +75,17 @@
           </div>
         </div>
 
+        <!-- Commodity breakdown pie chart -->
+        <div class="bg-zinc-50 rounded-xl p-3 flex flex-col">
+          <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Commodities</h3>
+          <div class="flex-1 min-h-0">
+            <D3PieChart
+              :slices="commodityPieSlices"
+              :on-slice-click="onCommodityClick"
+            />
+          </div>
+        </div>
+
         <div class="col-span-2 bg-zinc-50 rounded-xl p-3 flex flex-col">
           <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2 shrink-0">Evolution Over Time</h3>
           <div class="flex-1 min-h-0">
@@ -78,22 +93,6 @@
           </div>
         </div>
 
-      </div>
-
-      <!-- Row 3: Commodities (compact, with internal scroll) -->
-      <div class="shrink-0 bg-zinc-50 rounded-xl p-3">
-        <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide mb-2">Commodities in this Category</h3>
-        <div class="grid grid-cols-4 gap-1.5 max-h-24 overflow-y-auto">
-          <div
-            v-for="com in commodities"
-            :key="com.id"
-            @click="nav.push(`/commodities/${com.id}`, category)"
-            class="p-2 rounded-lg bg-white hover:bg-zinc-100 border border-zinc-200 cursor-pointer transition-colors"
-          >
-            <p class="text-xs font-medium text-zinc-700 leading-snug truncate">{{ com.name }}</p>
-            <p class="text-xs text-zinc-400 mt-0.5">{{ formatUsd(com.imports.usd + com.exports.usd) }}</p>
-          </div>
-        </div>
       </div>
 
     </div>
@@ -105,6 +104,7 @@ import { TRADE_DATA, CATEGORIES, YEARS } from '~/utils/dummyData'
 import { getCategoryYearlySeries, getCommoditiesByCategory } from '~/utils/tradeExtended'
 import { formatUsd, formatWeight, formatGrowth, formatPercent, slugToCategory } from '~/utils/formatters'
 import { useNavHistory } from '~/composables/useNavHistory'
+import type { PieSlice } from '~/components/d3/PieChart.vue'
 
 definePageMeta({ layout: 'canvas' })
 
@@ -140,6 +140,35 @@ const worldShare = computed(() => {
   const catTotal   = selectedYearData.value.imports.usd + selectedYearData.value.exports.usd
   return worldTotal === 0 ? 0 : (catTotal / worldTotal) * 100
 })
+
+// ── Commodity pie chart ────────────────────────────────────────────────────
+
+const PIE_PALETTE = [
+  '#3b82f6','#f97316','#22c55e','#a855f7','#eab308',
+  '#06b6d4','#ec4899','#f43f5e','#10b981','#8b5cf6',
+  '#f59e0b','#6366f1',
+]
+
+const commodityPieSlices = computed<PieSlice[]>(() => {
+  const sorted = [...commodities.value]
+    .map(c => ({ id: c.id, label: c.name, value: c.imports.usd + c.exports.usd }))
+    .filter(c => c.value > 0)
+    .sort((a, b) => b.value - a.value)
+
+  const top = sorted.slice(0, 11).map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }))
+
+  if (sorted.length <= 11) return top
+
+  const otherValue = sorted.slice(11).reduce((sum, s) => sum + s.value, 0)
+  return [...top, { id: '__other__', label: 'Other', value: otherValue, color: '#9ca3af' }]
+})
+
+function onCommodityClick(slice: PieSlice) {
+  if (slice.id === '__other__') return
+  nav.push(`/commodities/${slice.id}`, category.value)
+}
+
+// ── Bar charts + evolution ─────────────────────────────────────────────────
 
 const topImporters = computed(() =>
   [...TRADE_DATA]

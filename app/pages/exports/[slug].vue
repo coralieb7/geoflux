@@ -13,7 +13,11 @@
           v-model.number="selectedYear"
           class="flex-1 accent-orange-500 h-1"
         />
-        <span class="text-xs font-semibold text-zinc-600 w-9 text-right shrink-0">{{ selectedYear }}</span>
+        <button
+          @click="nav.push(`/years/${selectedYear}`, `${c.name} — Exports`)"
+          class="text-xs font-semibold text-zinc-500 hover:text-orange-500 w-9 text-right shrink-0 transition-colors"
+          title="Open year page"
+        >{{ selectedYear }}</button>
       </div>
 
       <!-- Row 1: 4 stat cards -->
@@ -93,7 +97,7 @@ import { useNavHistory } from '~/composables/useNavHistory'
 definePageMeta({ layout: 'canvas' })
 
 const route = useRoute()
-useNavHistory()
+const nav   = useNavHistory()
 
 const slug = computed(() => (route.params.slug as string).toUpperCase())
 const raw  = computed(() => getCountry(slug.value))

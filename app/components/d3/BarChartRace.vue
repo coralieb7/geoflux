@@ -1,192 +1,369 @@
-<!-- app/components/d3/BarChartRace.vue -->
+<!--
+  BarChartRace.vue  (rewritten as a progressive line-race chart)
+  ─────────────────────────────────────────────────────────────────────────────
+  • Lines build up from left as the year advances (race effect)
+  • Ghost lines (faint full-range preview) shown when ≤ 6 series
+  • Play / Pause / Reset + scrubber controls
+  • Dot + label at the right edge of each active line, de-collided
+  • Transitions when the year advances; instant update when scrubbing
+-->
 <template>
-  <div class="flex flex-col w-full h-full min-h-0 text-zinc-800">
-    <div ref="container" class="flex-1 relative overflow-hidden" />
-    <div class="flex items-center gap-3 mt-2 px-1">
-      <button @click="togglePlay" class="p-2 rounded-lg bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors">
-        <UIcon :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" class="size-5" />
+  <div class="flex flex-col w-full h-full min-h-0 select-none">
+    <!-- Chart SVG -->
+    <div ref="container" class="flex-1 min-h-0 overflow-hidden" />
+
+    <!-- Controls -->
+    <div class="flex items-center gap-2 mt-2 px-1 shrink-0">
+      <button
+        @click="resetAnim"
+        title="Reset"
+        class="p-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-500 transition-colors shrink-0"
+      >
+        <UIcon name="i-heroicons-arrow-uturn-left" class="size-3.5" />
+      </button>
+      <button
+        @click="togglePlay"
+        :title="isPlaying ? 'Pause' : 'Play'"
+        class="p-1 rounded-md bg-zinc-100 hover:bg-zinc-200 text-zinc-500 transition-colors shrink-0"
+      >
+        <UIcon :name="isPlaying ? 'i-heroicons-pause' : 'i-heroicons-play'" class="size-3.5" />
       </button>
       <input
         type="range"
-        :min="minYear"
-        :max="maxYear"
-        v-model.number="currentYear"
-        @input="stopPlay"
-        class="flex-1 accent-blue-500"
+        :min="0" :max="100" step="0.1"
+        v-model.number="progressPct"
+        @pointerdown="pauseAnim"
+        class="flex-1 accent-zinc-700 h-1"
       />
-      <span class="text-sm font-bold w-10 text-right">{{ currentYear }}</span>
+      <span class="text-xs font-bold text-zinc-600 w-9 text-right shrink-0">
+        {{ currentYear }}
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import * as d3 from 'd3'
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 export interface RaceSeriesPoint { year: number; value: number }
-export interface RaceSeries { id: string; label: string; color: string; data: RaceSeriesPoint[] }
+export interface RaceSeries      { id: string; label: string; color: string; data: RaceSeriesPoint[] }
 
 const props = defineProps<{
-  series: RaceSeries[]
+  series:      RaceSeries[]
   formatValue?: (v: number) => string
-  maxItems?: number
+  maxLines?:   number  // max highlighted/labelled lines (default: all ≤6, else 10)
 }>()
 
-const container = ref<HTMLDivElement | null>(null)
-const isPlaying = ref(false)
-const currentYear = ref(1988)
-const minYear = ref(1988)
-const maxYear = ref(2016)
+// ── Year helpers ──────────────────────────────────────────────────────────
 
-let timer: d3.Timer | null = null
-const TICK_DURATION = 750 // Milliseconds per year transition
-
-// Group and sort data frames per year
-const frames = computed(() => {
-  const map = new Map<number, any[]>()
-  props.series.forEach(s => {
-    s.data.forEach(d => {
-      if (!map.has(d.year)) map.set(d.year, [])
-      map.get(d.year)!.push({
-        id: s.id,
-        label: s.label,
-        color: s.color,
-        value: d.value
-      })
-    })
-  })
-
-  const limit = props.maxItems || 10
-
-  return Array.from(map.entries()).map(([year, items]) => ({
-    year,
-    items: items.sort((a,b) => b.value - a.value).slice(0, limit).map((item, i) => ({ ...item, rank: i }))
-  })).sort((a,b) => a.year - b.year)
+const allYears = computed(() => {
+  const s = new Set<number>()
+  props.series.forEach(sr => sr.data.forEach(d => s.add(d.year)))
+  return [...s].sort((a, b) => a - b)
 })
 
-watch(() => frames.value, (newFrames) => {
-  if (newFrames.length) {
-    minYear.value = newFrames[0].year
-    maxYear.value = newFrames[newFrames.length - 1].year
-    if (currentYear.value < minYear.value || currentYear.value > maxYear.value) {
-      currentYear.value = minYear.value
-    }
-    draw(currentYear.value)
-  }
-}, { immediate: true })
+// Start fully drawn (last year), users press Play to race from the beginning
+const progressPct = ref(100)
 
-watch(currentYear, (newYear) => draw(newYear))
+const currentYear = computed(() => {
+  const yrs = allYears.value
+  if (!yrs.length) return 1988
+  const idx = Math.min(
+    Math.round((progressPct.value / 100) * (yrs.length - 1)),
+    yrs.length - 1
+  )
+  return yrs[idx]!
+})
+
+// ── Animation controls ────────────────────────────────────────────────────
+
+const isPlaying = ref(false)
+const TICK_MS   = 700
+let timer: ReturnType<typeof setInterval> | null = null
 
 function togglePlay() {
-  if (isPlaying.value) stopPlay()
-  else {
-    if (currentYear.value >= maxYear.value) currentYear.value = minYear.value
+  if (isPlaying.value) {
+    pauseAnim()
+  } else {
+    if (progressPct.value >= 100) progressPct.value = 0
     isPlaying.value = true
-    timer = d3.interval(() => {
-      if (currentYear.value < maxYear.value) currentYear.value++
-      else stopPlay()
-    }, TICK_DURATION)
+    timer = setInterval(() => {
+      const step = 100 / Math.max(1, allYears.value.length - 1)
+      if (progressPct.value < 100) {
+        progressPct.value = Math.min(100, progressPct.value + step)
+      } else {
+        pauseAnim()
+      }
+    }, TICK_MS)
   }
 }
 
-function stopPlay() {
+function pauseAnim() {
   isPlaying.value = false
-  if (timer) timer.stop()
+  if (timer) { clearInterval(timer); timer = null }
 }
 
-onUnmounted(() => stopPlay())
+function resetAnim() {
+  pauseAnim()
+  progressPct.value = 0
+}
 
-const margin = { top: 20, right: 60, bottom: 10, left: 10 }
-let svg: d3.Selection<SVGSVGElement, unknown, null, undefined>
+onUnmounted(pauseAnim)
+
+// ── D3 state ──────────────────────────────────────────────────────────────
+
+const container = ref<HTMLDivElement | null>(null)
+
+const MARGIN   = { top: 20, right: 122, bottom: 32, left: 56 }
+const MIN_GAP  = 14  // minimum px gap between labels
+const FEW_MAX  = 6   // series count below which ghost lines + full opacity apply
+
+interface CS {
+  svgEl:   d3.Selection<SVGSVGElement, unknown, null, undefined>
+  g:       d3.Selection<SVGGElement, unknown, null, undefined>
+  xS:      d3.ScaleLinear<number, number>
+  yS:      d3.ScaleLinear<number, number>
+  lineGen: d3.Line<RaceSeriesPoint>
+  iW:      number
+  iH:      number
+}
+let cs: CS | null = null
+let cleanupRO: (() => void) | null = null
 
 onMounted(() => {
-  if (!container.value) return
-  svg = d3.select(container.value).append('svg').attr('width', '100%').attr('height', '100%')
-  const ro = new ResizeObserver(() => draw(currentYear.value))
-  ro.observe(container.value)
-  onUnmounted(() => ro.disconnect())
+  init()
+  if (container.value) {
+    const ro = new ResizeObserver(init)
+    ro.observe(container.value)
+    cleanupRO = () => ro.disconnect()
+  }
 })
 
-function draw(year: number) {
-  if (!container.value || !svg) return
-  const frame = frames.value.find(f => f.year === year)
-  if (!frame) return
+onUnmounted(() => { pauseAnim(); cleanupRO?.() })
 
-  const width = Math.max(100, container.value.clientWidth)
-  const height = Math.max(100, container.value.clientHeight)
-  const innerWidth = width - margin.left - margin.right
-  const innerHeight = height - margin.top - margin.bottom
+watch(() => props.series, init, { deep: true })
+watch(currentYear, (_, prev) => update(prev !== currentYear.value))
 
-  svg.attr('viewBox', `0 0 ${width} ${height}`)
+// ── Sanitise series IDs for use as CSS class names ────────────────────────
 
-  const x = d3.scaleLinear().domain([0, d3.max(frame.items, d => d.value) ?? 1]).range([0, innerWidth])
-  const maxRank = Math.max(1, frame.items.length)
-  const y = d3.scaleBand<number>().domain(d3.range(maxRank)).range([0, innerHeight]).padding(0.15)
+function sid(id: string) { return id.replace(/[^a-zA-Z0-9_-]/g, '_') }
+
+// ── init: build static SVG structure ─────────────────────────────────────
+
+function init() {
+  if (!container.value) return
+  const W = container.value.clientWidth
+  const H = container.value.clientHeight
+  if (W < 30 || H < 30) return
+
+  const yrs = allYears.value
+  if (!yrs.length || !props.series.length) return
+
+  cs?.svgEl.remove()
+
+  const iW = W - MARGIN.left - MARGIN.right
+  const iH = H - MARGIN.top  - MARGIN.bottom
+
+  const svgEl = d3.select(container.value)
+    .append('svg').attr('width', W).attr('height', H)
+
+  const g = svgEl.append('g')
+    .attr('transform', `translate(${MARGIN.left},${MARGIN.top})`)
+
+  const xS = d3.scaleLinear()
+    .domain([yrs[0]!, yrs[yrs.length - 1]!])
+    .range([0, iW])
+
+  const maxVal = d3.max(props.series, s => d3.max(s.data, d => d.value)) ?? 1
+  const yS = d3.scaleLinear()
+    .domain([0, maxVal]).range([iH, 0]).nice()
+
   const fmt = props.formatValue ?? ((v: number) => d3.format(',.0f')(v))
 
-  let g = svg.select<SVGGElement>('g.chart-group')
-  if (g.empty()) g = svg.append('g').attr('class', 'chart-group')
-  g.attr('transform', `translate(${margin.left},${margin.top})`)
+  // Y grid + axis
+  g.append('g')
+    .call(
+      d3.axisLeft(yS).ticks(5)
+        .tickFormat(v => fmt(+v))
+        .tickSize(-iW)
+    )
+    .call(gg => gg.select('.domain').remove())
+    .call(gg => gg.selectAll('.tick line')
+      .attr('stroke', '#e4e4e7').attr('stroke-dasharray', '3,3'))
+    .call(gg => gg.selectAll('.tick text')
+      .attr('fill', '#a1a1aa').attr('font-size', 10))
 
-  let axisG = svg.select<SVGGElement>('g.x-axis')
-  if (axisG.empty()) axisG = svg.append('g').attr('class', 'x-axis')
-  axisG.attr('transform', `translate(${margin.left},${margin.top})`)
-    .transition().duration(TICK_DURATION).ease(d3.easeLinear)
-    .call(d3.axisTop(x).ticks(5).tickFormat(v => fmt(+v)).tickSize(-innerHeight))
-    .call(sel => sel.select('.domain').remove())
-    .call(sel => sel.selectAll('.tick line').attr('stroke', 'currentColor').attr('opacity', 0.1))
-    .call(sel => sel.selectAll('text').attr('fill', 'currentColor').attr('opacity', 0.6))
+  // X axis — show ≤ 9 evenly spaced year ticks
+  const nTicks = Math.min(yrs.length, 9)
+  const step   = Math.max(1, Math.ceil((yrs.length - 1) / (nTicks - 1)))
+  const xTicks = [...new Set(
+    yrs.filter((_, i) => i % step === 0).concat(yrs[yrs.length - 1]!)
+  )]
 
-  let yearText = svg.select<SVGTextElement>('text.year-bg')
-  if (yearText.empty()) {
-    yearText = svg.append('text').attr('class', 'year-bg')
-      .attr('text-anchor', 'end').attr('font-weight', 'bold')
-      .attr('fill', 'currentColor').style('opacity', 0.1)
-  }
-  yearText.attr('x', width - margin.right).attr('y', height - margin.bottom)
-    .attr('font-size', Math.min(width / 4, 120)).text(year)
+  g.append('g')
+    .attr('transform', `translate(0,${iH})`)
+    .call(
+      d3.axisBottom(xS)
+        .tickValues(xTicks)
+        .tickFormat(d => String(d))
+        .tickSize(3)
+    )
+    .call(gg => gg.select('.domain').attr('stroke', '#d4d4d8'))
+    .call(gg => gg.selectAll('.tick text')
+      .attr('fill', '#71717a').attr('font-size', 10))
 
-  const bars = g.selectAll<SVGGElement, any>('g.bar-group').data(frame.items, d => d.id)
+  const lineGen = d3.line<RaceSeriesPoint>()
+    .x(d => xS(d.year))
+    .y(d => yS(d.value))
+    .curve(d3.curveCatmullRom.alpha(0.5))
 
-  const barsEnter = bars.enter().append('g').attr('class', 'bar-group')
-    .attr('transform', d => `translate(0,${innerHeight})`) // start from bottom
+  const few = props.series.length <= FEW_MAX
 
-  barsEnter.append('rect').attr('height', y.bandwidth()).attr('x', 0).attr('width', 0)
-    .attr('fill', d => d.color).attr('rx', 4).attr('opacity', 0.9)
-
-  barsEnter.append('text').attr('class', 'label').attr('x', 6).attr('dy', '0.35em')
-    .attr('font-weight', '600').attr('font-size', 12)
-
-  barsEnter.append('text').attr('class', 'value').attr('dy', '0.35em')
-    .attr('fill', 'currentColor').style('opacity', 0.7).attr('font-size', 12)
-
-  const barsMerge = barsEnter.merge(bars)
-
-  barsMerge.transition().duration(TICK_DURATION).ease(d3.easeLinear)
-    .attr('transform', d => `translate(0,${y(d.rank)})`)
-
-  barsMerge.select('rect').transition().duration(TICK_DURATION).ease(d3.easeLinear)
-    .attr('width', d => Math.max(0, x(d.value))).attr('height', y.bandwidth())
-
-  barsMerge.select('text.label').transition().duration(TICK_DURATION).ease(d3.easeLinear)
-    .attr('y', y.bandwidth() / 2)
-    .attr('fill', d => x(d.value) < 60 ? 'currentColor' : 'white')
-    .text(d => d.label)
-
-  barsMerge.select('text.value').transition().duration(TICK_DURATION).ease(d3.easeLinear)
-    .attr('y', y.bandwidth() / 2)
-    .attr('x', d => Math.max(0, x(d.value)) + 6)
-    .textTween(function(d) {
-      const self = this as any
-      const start = self._currentValue || 0
-      const end = d.value
-      self._currentValue = end
-      const i = d3.interpolate(start, end)
-      return t => fmt(i(t))
+  // Ghost lines (faint full-range preview) — only for small series count
+  if (few) {
+    props.series.forEach(s => {
+      g.append('path')
+        .datum(s.data)
+        .attr('class', `ghost-${sid(s.id)}`)
+        .attr('d', lineGen)
+        .attr('fill', 'none')
+        .attr('stroke', s.color)
+        .attr('stroke-width', 1.5)
+        .attr('opacity', 0.13)
     })
+  }
 
-  bars.exit().transition().duration(TICK_DURATION)
-    .attr('transform', `translate(0,${innerHeight})`)
-    .style('opacity', 0).remove()
+  // Active line placeholders (filled by update())
+  props.series.forEach(s => {
+    g.append('path')
+      .attr('class', `active-${sid(s.id)}`)
+      .attr('fill', 'none')
+      .attr('stroke', s.color)
+      .attr('stroke-width', few ? 2.5 : 2)
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-linecap', 'round')
+  })
+
+  // Year indicator (vertical dashed line)
+  g.append('line')
+    .attr('class', 'ind')
+    .attr('y1', 0).attr('y2', iH)
+    .attr('stroke', '#71717a')
+    .attr('stroke-width', 1.5)
+    .attr('stroke-dasharray', '4,3')
+    .attr('opacity', 0.45)
+
+  // Dots + labels groups
+  g.append('g').attr('class', 'dotsG')
+  g.append('g').attr('class', 'labsG')
+
+  cs = { svgEl, g, xS, yS, lineGen, iW, iH }
+  update(false)
+}
+
+// ── update: animate to currentYear ────────────────────────────────────────
+
+function update(transition: boolean) {
+  if (!cs) return
+  const { g, xS, yS, lineGen, iW, iH } = cs
+  const cy  = currentYear.value
+  const cx  = xS(cy)
+  const dur = transition ? TICK_MS * 0.75 : 0
+  const fmt = props.formatValue ?? ((v: number) => d3.format(',.0f')(v))
+  const few = props.series.length <= FEW_MAX
+  const maxN = props.maxLines ?? (few ? props.series.length : 10)
+
+  // Sort series by descending value at current year
+  const byVal = [...props.series]
+    .map(s => ({ s, val: s.data.find(d => d.year === cy)?.value ?? 0 }))
+    .sort((a, b) => b.val - a.val)
+
+  const topIds = new Set(byVal.slice(0, maxN).map(v => v.s.id))
+
+  // ─ Active lines ──────────────────────────────────────────────────────────
+  props.series.forEach(s => {
+    const pts   = s.data.filter(d => d.year <= cy)
+    const isTop = topIds.has(s.id)
+    g.select(`.active-${sid(s.id)}`)
+      .attr('d', pts.length ? lineGen(pts) : null)
+      .attr('opacity', isTop ? (few ? 0.88 : 0.82) : 0.1)
+      .attr('stroke-width', isTop ? (few ? 2.5 : 2) : 1)
+  })
+
+  // ─ Indicator ─────────────────────────────────────────────────────────────
+  g.select('.ind').attr('x1', cx).attr('x2', cx)
+
+  // ─ Dots ──────────────────────────────────────────────────────────────────
+  type DD = { id: string; color: string; px: number; py: number }
+  const dotData: DD[] = byVal.slice(0, maxN).map(({ s, val }) => ({
+    id: s.id, color: s.color, px: cx, py: yS(val),
+  }))
+
+  const dots = g.select('.dotsG')
+    .selectAll<SVGCircleElement, DD>('circle')
+    .data(dotData, d => d.id)
+
+  const dE = dots.enter().append('circle').attr('r', 4)
+  const dM = dE.merge(dots)
+
+  if (dur > 0) {
+    dM.transition().duration(dur)
+      .attr('cx', d => d.px).attr('cy', d => d.py)
+      .attr('fill', d => d.color).attr('opacity', 0.9)
+  } else {
+    dM.attr('cx', d => d.px).attr('cy', d => d.py)
+      .attr('fill', d => d.color).attr('opacity', 0.9)
+  }
+  dots.exit().remove()
+
+  // ─ Labels (fixed right margin, de-collided) ───────────────────────────────
+  type LD = { id: string; color: string; rawY: number; val: number; label: string; labelY: number }
+
+  const raw = byVal.slice(0, maxN)
+    .map(({ s, val }) => ({
+      id: s.id, color: s.color, rawY: yS(val), val, label: s.label, labelY: 0,
+    }))
+    .sort((a, b) => a.rawY - b.rawY)
+
+  // Push-down de-collision
+  raw.forEach((item, i) => {
+    item.labelY = i === 0 ? item.rawY : Math.max(item.rawY, raw[i - 1]!.labelY + MIN_GAP)
+  })
+
+  // Clamp to chart height from the bottom up
+  for (let i = raw.length - 1; i >= 0; i--) {
+    raw[i]!.labelY = Math.min(raw[i]!.labelY, iH - 2)
+    if (i < raw.length - 1) {
+      raw[i]!.labelY = Math.min(raw[i]!.labelY, raw[i + 1]!.labelY - MIN_GAP)
+    }
+  }
+
+  const lx = iW + 10  // labels always at right of chart area (inside right margin)
+
+  const labs = g.select('.labsG')
+    .selectAll<SVGTextElement, LD>('text')
+    .data(raw as LD[], d => d.id)
+
+  const lE = labs.enter().append('text')
+    .attr('font-size', 10).attr('font-weight', '500')
+
+  const lM = lE.merge(labs)
+  const labelText = (d: LD) => {
+    const n = d.label.length > 13 ? d.label.slice(0, 12) + '…' : d.label
+    return few ? `${n}  ${fmt(d.val)}` : n
+  }
+
+  if (dur > 0) {
+    lM.transition().duration(dur)
+      .attr('x', lx).attr('y', d => d.labelY + 4)
+      .attr('fill', d => d.color)
+      .text(labelText)
+  } else {
+    lM.attr('x', lx).attr('y', d => d.labelY + 4)
+      .attr('fill', d => d.color)
+      .text(labelText)
+  }
+
+  labs.exit().remove()
 }
 </script>

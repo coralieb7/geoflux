@@ -1,10 +1,11 @@
 // composables/useTradeState.ts
 export const useTradeState = () => {
-  const showImports = useState<boolean>('trade-imports', () => false)
-  const showExports = useState<boolean>('trade-exports', () => false)
-  const metric = useState<'usd' | 'weight'>('trade-metric', () => 'usd')
+  const showImports      = useState<boolean>('trade-imports',   () => false)
+  const showExports      = useState<boolean>('trade-exports',   () => false)
+  const metric           = useState<'usd' | 'weight'>('trade-metric', () => 'usd')
   const selectedCategory = useState<string | null>('trade-category', () => null)
-  const showFlows = useState<boolean>('trade-flows', () => false)
+  const showFlows        = useState<boolean>('trade-flows',     () => false)
+  const selectedYear     = useState<number>('trade-year',       () => 2016)
 
-  return { showImports, showExports, metric, selectedCategory, showFlows }
+  return { showImports, showExports, metric, selectedCategory, showFlows, selectedYear }
 }

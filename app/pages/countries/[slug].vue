@@ -1,6 +1,34 @@
 <template>
   <PageWindow :title="c.name">
-    <div class="flex flex-col gap-2 h-full">
+    <div class="relative flex flex-col gap-2 h-full">
+
+      <!-- Full-screen sunburst overlay (sits on top of the page content) -->
+      <Transition name="sunburst-in">
+        <div
+          v-if="pieFullScreen"
+          class="absolute inset-0 z-20 bg-white rounded-xl flex flex-col"
+        >
+          <div class="flex items-center justify-between px-3 py-2 border-b border-zinc-100 shrink-0">
+            <h3 class="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
+              Trade Categories — {{ c.name }}
+            </h3>
+            <button
+              @click="pieFullScreen = false"
+              class="p-1.5 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400"
+              title="Collapse"
+            >
+              <UIcon name="i-heroicons-arrows-pointing-in" class="size-4" />
+            </button>
+          </div>
+          <div class="flex-1 min-h-0">
+            <D3SunburstPie
+              :categories="sunburstCategories"
+              @navigate-category="onNavCategory"
+              @navigate-commodity="onNavCommodity"
+            />
+          </div>
+        </div>
+      </Transition>
 
       <!-- Row 1: key stats (auto-height) -->
       <div class="grid grid-cols-4 gap-2 shrink-0">
@@ -38,7 +66,7 @@
           </div>
         </StatCard>
 
-        <!-- Top 3 import sources (no expandable — just always shown) -->
+        <!-- Top 3 import sources -->
         <div class="bg-zinc-50 rounded-xl p-3 flex flex-col gap-1.5">
           <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide leading-none">Top Import Sources</h3>
           <div v-if="tradeConnections" class="flex flex-col gap-1 mt-0.5">
@@ -56,25 +84,22 @@
 
       </div>
 
-      <!-- Row 2: category breakdown + top exporters + evolution chart (fills remaining height) -->
+      <!-- Row 2: pie preview + top exporters + evolution chart (fills remaining height) -->
       <div class="grid grid-cols-4 gap-2 flex-1 min-h-0">
 
-        <!-- Pie chart -->
+        <!-- Pie preview — click to open full-screen sunburst -->
         <div
-          class="bg-zinc-50 rounded-xl p-3 flex flex-col gap-2 cursor-pointer"
-          @click="pieExpanded = !pieExpanded"
+          class="bg-zinc-50 rounded-xl p-3 flex flex-col gap-2 cursor-pointer hover:bg-zinc-100 transition-colors"
+          @click="pieFullScreen = true"
         >
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between shrink-0">
             <h3 class="text-xs font-semibold text-zinc-400 uppercase tracking-wide">Categories</h3>
-            <UIcon :name="pieExpanded ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="size-3.5 text-zinc-400" />
+            <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5 text-zinc-400" />
           </div>
           <div class="flex-1 min-h-0">
-            <D3PieChart
-              :slices="pieSlices"
-              :on-slice-click="pieExpanded ? onCategoryClick : undefined"
-            />
+            <D3PieChart :slices="pieSlices" />
           </div>
-          <p v-if="pieExpanded" class="text-xs text-zinc-400 text-center shrink-0">Click slice to open</p>
+          <p class="text-xs text-zinc-400 text-center shrink-0">Click to explore</p>
         </div>
 
         <!-- Top 3 export destinations -->
@@ -108,10 +133,11 @@
 
 <script setup lang="ts">
 import { getCountry, getTradeConnections, iso3ToName } from '~/utils/dummyData'
-import { getCountryYearlySeries } from '~/utils/tradeExtended'
+import { getCountryYearlySeries, getCommoditiesByCategory } from '~/utils/tradeExtended'
 import { formatUsd, formatWeight, categoryToSlug } from '~/utils/formatters'
 import { useNavHistory } from '~/composables/useNavHistory'
 import type { PieSlice } from '~/components/d3/PieChart.vue'
+import type { SunburstCategory } from '~/components/d3/SunburstPie.vue'
 
 definePageMeta({ layout: 'canvas' })
 
@@ -132,6 +158,8 @@ const CATEGORY_COLORS = [
   '#f59e0b','#6366f1',
 ]
 
+// ── Pie / sunburst data ────────────────────────────────────────────────────
+
 const pieSlices = computed<PieSlice[]>(() => {
   const all = Object.entries(c.value.byCategory)
     .map(([cat, data]) => ({
@@ -149,19 +177,55 @@ const pieSlices = computed<PieSlice[]>(() => {
   return [...top, { id: '__other__', label: 'Other', value: otherValue, color: '#9ca3af' }]
 })
 
-const pieExpanded = ref(false)
+const sunburstCategories = computed<SunburstCategory[]>(() =>
+  pieSlices.value
+    .filter(s => s.id !== '__other__')
+    .map(s => ({
+      id: s.id,
+      label: s.label,
+      slug: categoryToSlug(s.id),
+      color: s.color ?? '#9ca3af',
+      commodities: getCommoditiesByCategory(s.id).map(com => ({
+        id: com.id,
+        label: com.name,
+        value: com.imports.usd + com.exports.usd,
+      })),
+    }))
+)
 
-function onCategoryClick(slice: PieSlice) {
-  if (slice.id === '__other__') return
-  nav.push(`/categories/${categoryToSlug(slice.id)}`, c.value.name)
+// ── Full-screen overlay state ──────────────────────────────────────────────
+
+const pieFullScreen = ref(false)
+
+function onNavCategory(catSlug: string) {
+  pieFullScreen.value = false
+  nav.push(`/categories/${catSlug}`, c.value.name)
 }
 
-const tradeConnections = computed(() => getTradeConnections(c.value.iso3, '2016'))
+function onNavCommodity(id: string) {
+  pieFullScreen.value = false
+  nav.push(`/commodities/${id}`, c.value.name)
+}
 
-const yearlySeries = computed(() => getCountryYearlySeries(c.value))
+// ── Trade connections + evolution ──────────────────────────────────────────
+
+const tradeConnections = computed(() => getTradeConnections(c.value.iso3, '2016'))
+const yearlySeries     = computed(() => getCountryYearlySeries(c.value))
 
 const evolutionSeries = computed(() => [
   { id: 'imports', label: 'Imports', color: '#3b82f6', data: yearlySeries.value.map(p => ({ year: p.year, value: p.imports.usd })) },
   { id: 'exports', label: 'Exports', color: '#f97316', data: yearlySeries.value.map(p => ({ year: p.year, value: p.exports.usd })) },
 ])
 </script>
+
+<style scoped>
+.sunburst-in-enter-active,
+.sunburst-in-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.sunburst-in-enter-from,
+.sunburst-in-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+</style>

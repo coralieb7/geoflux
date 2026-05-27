@@ -38,8 +38,8 @@ interface YearEntry {
 export interface YearSnapshot {
   totalImports:         { usd: number; weight: number }
   totalExports:         { usd: number; weight: number }
-  topImportCategories:  Array<{ name: string; usd: number }>
-  topExportCategories:  Array<{ name: string; usd: number }>
+  topImportCategories:  Array<{ id: string; name: string; usd: number }>
+  topExportCategories:  Array<{ id: string; name: string; usd: number }>
   topImportCountries:   Array<{ iso3: string; name: string; usd: number }>
   topExportCountries:   Array<{ iso3: string; name: string; usd: number }>
   historicalNote:       string

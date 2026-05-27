@@ -21,7 +21,11 @@
           v-model.number="selectedYear"
           class="flex-1 accent-blue-500 h-1"
         />
-        <span class="text-xs font-semibold text-zinc-600 w-9 text-right shrink-0">{{ selectedYear }}</span>
+        <button
+          @click="nav.push(`/years/${selectedYear}`, com.name)"
+          class="text-xs font-semibold text-zinc-500 hover:text-blue-500 w-9 text-right shrink-0 transition-colors"
+          title="Open year page"
+        >{{ selectedYear }}</button>
       </div>
 
       <!-- Row 1: 4 stat cards -->

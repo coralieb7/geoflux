@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute inset-0 z-40 p-2 md:p-5 pointer-events-none flex justify-center items-center">
+  <div class="absolute inset-0 z-40 p-5 md:p-10 pointer-events-none flex justify-center items-center">
     <div class="relative w-full h-full max-w-[1400px]">
 
       <!-- Phase 1: SVG border trace — only shown on first open (when !alreadyOpen) -->
