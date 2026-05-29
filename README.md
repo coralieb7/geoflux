@@ -1,137 +1,60 @@
-# Project of Data Visualization (COM-480)
+# GeoFlux — Visualizing 30 Years of Global Commodity Trade
 
-| Student's name | SCIPER |
-| -------------- | ------ |
-| Jason Miller   |421814 |
-| Jaime López    | 423183|
-| Coralie Banuls      | 346654|
-| Lucas Martiniano      |423438 |
+> Course project of Data Visualization (COM-480 @ EPFL)
 
-[Milestone 1](#milestone-1) • [Milestone 2](#milestone-2) • [Milestone 3](#milestone-3)
+This repository contains a web app to visualize world trade flows from 1988 to 2016 using the [UN Comtrade Global Commodity Trade Statistics](https://www.kaggle.com/datasets/unitednations/global-commodity-trade-statistics) dataset. The app centers around an interactive 3D globe, allowing users to click on any country to view detailed trade statistics, explore import and export flows by category and year, and follow animated bilateral trade connections between countries. A search bar enables quick navigation to specific countries, categories, commodities or years.
 
-## Milestone 1 (20th March, 5pm)
+![GeoFlux globe view](process-book-assets/globe-imports.png)
 
-**10% of the final grade**
+## Screencast
 
-This is a preliminary milestone to let you set up goals for your final project and assess the feasibility of your ideas.
-Please, fill the following sections about your project.
+A screencast demonstrating the key features of GeoFlux is available in the repository as `screencast.mp4`.
 
-*(max. 2000 characters per section)*
+## Technical setup
 
-### Dataset
+This project is built using [Nuxt 4](https://nuxt.com), a full-stack development framework based on [Vue 3](https://vuejs.org). It relies on [Mapbox GL JS](https://www.mapbox.com) for globe rendering and [D3.js](https://d3js.org) for all chart components. Styling is handled with [Tailwind CSS v4](https://tailwindcss.com). The project is written in [TypeScript](https://www.typescriptlang.org).
 
-> Find a dataset (or multiple) that you will explore. Assess the quality of the data it contains and how much preprocessing / data-cleaning it will require before tackling visualization. We recommend using a standard dataset as this course is not about scraping nor data processing.
->
-> Hint: some good pointers for finding quality publicly available datasets ([Google dataset search](https://datasetsearch.research.google.com/), [Kaggle](https://www.kaggle.com/datasets), [OpenSwissData](https://opendata.swiss/en/), [SNAP](https://snap.stanford.edu/data/) and [FiveThirtyEight](https://data.fivethirtyeight.com/)).
+The main layout is defined in `app/layouts/canvas.vue`, which manages the background globe and shared state. The root route (`/`) is handled by `app/pages/index.vue`, where the search bar, control panel and navigation buttons live. All detail views — countries, categories, commodities and years — are rendered as overlay windows from dedicated subpages within the `app/pages/` directory.
 
-### Problematic
+## Run instructions
 
-> Frame the general topic of your visualization and the main axis that you want to develop.
-> - What am I trying to show with my visualization?
-> - Think of an overview for the project, your motivation, and the target audience.
+### 1. Clone the repository locally
 
-### Exploratory Data Analysis
+```sh
+git clone https://github.com/com-480-data-visualization/geoflux.git geoflux
+```
 
-> Pre-processing of the data set you chose
-> - Show some basic statistics and get insights about the data
+### 2. Set up your Mapbox token
 
-### Related work
+Create a `.env` file at the root of the project and add your Mapbox public token:
 
+```sh
+NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_token_here
+```
 
-> - What others have already done with the data?
-> - Why is your approach original?
-> - What source of inspiration do you take? Visualizations that you found on other websites or magazines (might be unrelated to your data).
-> - In case you are using a dataset that you have already explored in another context (ML or ADA course, semester project...), you are required to share the report of that work to outline the differences with the submission for this class.
+### 3. Install dependencies
 
-## Milestone 2 (17th April, 5pm)
-
-**10% of the final grade**
-
-
-## Milestone 3 (29th May, 5pm)
-
-**80% of the final grade**
-
-
-## Late policy
-
-- < 24h: 80% of the grade for the milestone
-- < 48h: 70% of the grade for the milestone
-
-
-
-# Nuxt Minimal Starter
-
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
-
-## Setup
-
-Make sure to install dependencies:
-
-```bash
-# npm
+```sh
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
+### 4. Run the development server
 
-Start the development server on `http://localhost:3000`:
-
-```bash
-# npm
+```sh
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+The app will be available at `http://localhost:3000`.
 
-Build the application for production:
+## Process Book
 
-```bash
-# npm
-npm run build
+The process book for this project can be found as `process-book.html` and `process-book.md` at the root of the repository. It details our journey from concept to final product, including design decisions, challenges faced, and individual team member contributions.
 
-# pnpm
-pnpm build
+## Team
 
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+| Name | SCIPER |
+| ---- | ------ |
+| Coralie Banuls | 346654 |
+| Jason Miller | 421814 |
+| Jaime López | 423183 |
+| Lucas Martiniano | 423438 |

@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GeoFlux — Process Book</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+@page { size: A4; margin: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #010810;
+  color: #93c5fd;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* ── Page shell ── */
+.page {
+  width: 210mm;
+  height: 297mm;
+  background: #010810;
+  position: relative;
+  overflow: hidden;
+  page-break-after: always;
+  page-break-inside: avoid;
+  display: flex;
+  flex-direction: column;
+}
+.page:last-child { page-break-after: auto; }
+
+/* ── Header ── */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 20px;
+  background: #071828;
+  border-bottom: 1px solid rgba(45,107,181,0.25);
+  flex-shrink: 0;
+}
+.logo { font-size: 10.5pt; font-weight: 800; letter-spacing: -0.4px; }
+.logo-g { color: #fff; }
+.logo-f { color: #3b82f6; }
+.pgn { font-size: 6.5pt; color: rgba(147,197,253,0.35); font-weight: 500; letter-spacing: 0.5px; }
+
+/* ── Body area ── */
+.body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+/* ── Typography ── */
+h1 { font-size: 38pt; font-weight: 800; letter-spacing: -1.5px; color: #fff; line-height: 1; }
+h2 { font-size: 14pt; font-weight: 700; color: #fff; letter-spacing: -0.3px; margin-bottom: 6px; }
+h3 { font-size: 7pt; font-weight: 600; color: rgba(147,197,253,0.55); text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 5px; }
+p  { font-size: 7.5pt; line-height: 1.6; color: rgba(147,197,253,0.72); }
+em { font-style: italic; }
+strong, .w { color: #fff; font-weight: 600; }
+.dim { color: rgba(147,197,253,0.38); }
+.blue { color: #3b82f6; }
+.orange { color: #f97316; }
+.purple { color: #a855f7; }
+.green { color: #22c55e; }
+.lbl {
+  font-size: 6pt; font-weight: 600; text-transform: uppercase; letter-spacing: 1.2px;
+  color: rgba(147,197,253,0.35); margin-bottom: 6px;
+}
+
+/* ── Cards ── */
+.card {
+  background: #0d2545;
+  border: 1px solid rgba(45,107,181,0.28);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.card-dark {
+  background: #071828;
+  border: 1px solid rgba(45,107,181,0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+/* ── Tag / pill ── */
+.tag {
+  display: inline-block;
+  font-size: 6pt; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px;
+  padding: 2px 7px; border-radius: 3px; margin: 2px 3px 2px 0;
+}
+.tb { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.35); color: #93c5fd; }
+.to { background: rgba(249,115,22,0.12);  border: 1px solid rgba(249,115,22,0.35);  color: #fdba74; }
+.tg { background: rgba(34,197,94,0.12);   border: 1px solid rgba(34,197,94,0.35);   color: #86efac; }
+.tq { background: rgba(45,107,181,0.12);  border: 1px solid rgba(45,107,181,0.3);   color: rgba(147,197,253,0.7); }
+
+/* ── Divider ── */
+.div {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(45,107,181,0.35), transparent);
+  flex-shrink: 0;
+}
+
+/* ── Grid helpers ── */
+.g2  { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.g3  { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 7px; }
+.g4  { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; }
+.g23 { display: grid; grid-template-columns: 2fr 3fr; gap: 8px; }
+.g32 { display: grid; grid-template-columns: 3fr 2fr; gap: 8px; }
+.g13 { display: grid; grid-template-columns: 1fr 3fr; gap: 8px; }
+
+/* ── Screenshot frame ── */
+.ss {
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(45,107,181,0.22);
+  box-shadow: 0 3px 14px rgba(0,0,0,0.55);
+  flex-shrink: 0;
+}
+.ss img { width: 100%; display: block; }
+.cap {
+  font-size: 6pt; color: rgba(147,197,253,0.32); text-align: center;
+  margin-top: 4px; font-style: italic;
+}
+
+/* ── Stat mini ── */
+.stat {
+  background: #071828;
+  border: 1px solid rgba(45,107,181,0.18);
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+.stat .v { font-size: 16pt; font-weight: 700; color: #fff; line-height: 1; }
+.stat .l { font-size: 6pt;  text-transform: uppercase; letter-spacing: 0.7px; color: rgba(147,197,253,0.35); margin-top: 3px; }
+
+/* ── Bullet list ── */
+.bl { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.bl li { font-size: 7.5pt; color: rgba(147,197,253,0.72); padding-left: 12px; position: relative; line-height: 1.55; }
+.bl li::before { content: "•"; position: absolute; left: 0; color: #3b82f6; font-weight: 700; }
+
+/* ── Change rows ── */
+.chrow {
+  display: flex; align-items: flex-start; gap: 7px;
+  font-size: 7pt; padding: 4px 0;
+  border-bottom: 1px solid rgba(45,107,181,0.1);
+}
+.chrow:last-child { border-bottom: none; }
+.chrow .bef { color: rgba(147,197,253,0.38); flex: 1; font-style: italic; line-height: 1.5; }
+.chrow .arr { color: #3b82f6; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+.chrow .aft { color: rgba(255,255,255,0.82); flex: 1; font-weight: 500; line-height: 1.5; }
+
+/* ── Member card ── */
+.mc {
+  background: #071828;
+  border: 1px solid rgba(45,107,181,0.18);
+  border-radius: 8px;
+  padding: 9px 11px;
+}
+.mc .mn { font-size: 8.5pt; font-weight: 700; color: #fff; margin-bottom: 1px; }
+.mc .mr { font-size: 6pt;  font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #3b82f6; margin-bottom: 5px; }
+.mc .mt { font-size: 7pt;  color: rgba(147,197,253,0.62); line-height: 1.58; }
+
+/* ── Cover-specific ── */
+.cover-rings span {
+  position: absolute; border-radius: 50%; border: 1px solid rgba(45,107,181,0.1);
+}
+</style>
+</head>
+<body>
+
+
+<!-- ═══════════════════════ PAGE 1 — COVER ═══════════════════════════ -->
+<div class="page" style="justify-content:space-between;">
+
+  <!-- decorative circles -->
+  <span style="position:absolute;width:480px;height:480px;border-radius:50%;border:1px solid rgba(45,107,181,0.08);right:-60px;top:20px;"></span>
+  <span style="position:absolute;width:340px;height:340px;border-radius:50%;border:1px solid rgba(45,107,181,0.1);right:0px;top:80px;"></span>
+  <span style="position:absolute;width:200px;height:200px;border-radius:50%;border:1px solid rgba(59,130,246,0.12);right:60px;top:150px;"></span>
+  <span style="position:absolute;width:90px;height:90px;border-radius:50%;border:1px solid rgba(59,130,246,0.15);right:125px;top:215px;"></span>
+  <!-- glow -->
+  <span style="position:absolute;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(59,130,246,0.07) 0%,transparent 70%);right:30px;top:60px;"></span>
+
+  <!-- globe bleed image -->
+  <img src="process-book-assets/globe-imports.png"
+    style="position:absolute;right:0;top:0;bottom:0;height:100%;width:55%;object-fit:cover;object-position:center;opacity:0.5;
+    -webkit-mask-image:linear-gradient(to left,rgba(0,0,0,0.65) 0%,transparent 100%);
+    mask-image:linear-gradient(to left,rgba(0,0,0,0.65) 0%,transparent 100%);">
+
+  <!-- dark gradient overlay so text is readable -->
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,#010810 45%,rgba(1,8,16,0.3) 100%);"></div>
+
+  <!-- content -->
+  <div style="position:relative;z-index:2;padding:44px 38px 0;">
+    <h1><span style="color:#fff;">Geo</span><span style="color:#3b82f6;">Flux</span></h1>
+    <p style="font-size:11pt;color:rgba(147,197,253,0.55);margin-top:6px;font-weight:400;letter-spacing:0.1px;">Visualizing 30 Years of Global Commodity Trade</p>
+
+    <div style="width:44px;height:2px;background:linear-gradient(90deg,#3b82f6,transparent);margin:18px 0 14px;"></div>
+
+    <p style="max-width:310px;font-size:8pt;color:rgba(147,197,253,0.6);line-height:1.7;">
+      An interactive data visualisation dashboard exploring world trade flows from 1988 to 2016, across 112 countries, 16 trade categories and hundreds of commodities. Built with Nuxt, Mapbox GL and D3.js.
+    </p>
+
+    <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:0;">
+      <span class="tag tb">Nuxt 4</span>
+      <span class="tag tb">Mapbox GL JS</span>
+      <span class="tag tb">D3.js</span>
+      <span class="tag tb">TypeScript</span>
+      <span class="tag to">UN Comtrade</span>
+      <span class="tag to">Kaggle Trade DB</span>
+      <span class="tag tq">Tailwind CSS v4</span>
+    </div>
+  </div>
+
+  <div style="position:relative;z-index:2;padding:0 38px 38px;">
+    <p style="font-size:6pt;text-transform:uppercase;letter-spacing:1.8px;color:rgba(147,197,253,0.3);margin-bottom:9px;">Team members</p>
+    <div style="display:flex;gap:22px;flex-wrap:wrap;margin-bottom:18px;">
+      <span style="font-size:9pt;color:rgba(147,197,253,0.8);font-weight:500;">Coralie Banuls</span>
+      <span style="font-size:9pt;color:rgba(147,197,253,0.8);font-weight:500;">Jason Miller</span>
+      <span style="font-size:9pt;color:rgba(147,197,253,0.8);font-weight:500;">Jaime Lopez</span>
+      <span style="font-size:9pt;color:rgba(147,197,253,0.8);font-weight:500;">Lucas Martiniano</span>
+    </div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;">
+      <div><p class="dim" style="font-size:6pt;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Course</p><p style="font-size:8pt;color:rgba(147,197,253,0.75);font-weight:500;">COM-480 Data Visualisation</p></div>
+      <div><p class="dim" style="font-size:6pt;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Institution</p><p style="font-size:8pt;color:rgba(147,197,253,0.75);font-weight:500;">EPFL — Spring 2026</p></div>
+      <div><p class="dim" style="font-size:6pt;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">Data period</p><p style="font-size:8pt;color:rgba(147,197,253,0.75);font-weight:500;">1988 to 2016</p></div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- ═══════════════════════ PAGE 2 — INTRODUCTION & DATASETS ═════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">02 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">Introduction</div>
+      <h2>Why GeoFlux?</h2>
+      <p>Over the three decades covered by our dataset, the world experienced profound macroeconomic shifts: the fall of the Soviet Union, the rise of China as a global manufacturing superpower, the dot-com boom, and the 2008 financial crisis. All of these events left fingerprints in trade data. GeoFlux was born from one question — can we make those fingerprints visible and explorable by anyone?</p>
+    </div>
+
+    <div class="div"></div>
+
+    <div>
+      <div class="lbl">Datasets</div>
+      <h2>Two Complementary Sources</h2>
+      <div class="g2" style="margin-top:6px;">
+
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+            <span class="tag to" style="margin:0;">Primary</span>
+            <h3 style="text-transform:none;letter-spacing:0;font-size:7.5pt;color:#fff;margin:0;">UN Comtrade — Global Commodity Trade Statistics</h3>
+          </div>
+          <p>Published by the United Nations Statistics Division and available on Kaggle. The dataset contains <strong>8,225,871 records</strong> and 10 variables, covering international trade between <strong>209 countries</strong> from 1988 to 2016. Key fields include country, commodity category, trade direction (import or export), trade value in USD, and weight in kg.</p>
+          <div class="div" style="margin:7px 0;"></div>
+          <p>This dataset powers every page: the globe choropleth, country detail windows, category and commodity pages, evolution charts, stat cards and supply barometers.</p>
+        </div>
+
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+            <span class="tag tb" style="margin:0;">Secondary</span>
+            <h3 style="text-transform:none;letter-spacing:0;font-size:7.5pt;color:#fff;margin:0;">Kaggle — International Trade Database</h3>
+          </div>
+          <p>A second dataset was required for the <strong>Trade Flows</strong> feature. The primary UN dataset records what each country trades and how much, but not <em>with whom</em>. The Kaggle International Trade Database fills this gap with bilateral partner data, enabling us to compute the top 3 import sources and export destinations per country per year.</p>
+          <div class="div" style="margin:7px 0;"></div>
+          <p style="color:rgba(249,115,22,0.72);">Limitation: the secondary dataset does not carry sufficient category-level breakdowns. Trade flow arcs on the map therefore represent total trade between country pairs and cannot be filtered by category.</p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="g4">
+      <div class="stat"><div class="v">8.2M</div><div class="l">Trade records</div></div>
+      <div class="stat"><div class="v">112</div><div class="l">Countries</div></div>
+      <div class="stat"><div class="v">29</div><div class="l">Years covered</div></div>
+      <div class="stat"><div class="v">90+</div><div class="l">Categories</div></div>
+    </div>
+
+    <div class="div"></div>
+
+    <div>
+      <div class="lbl">Audience and Objectives</div>
+      <div class="g2">
+        <p>GeoFlux targets students, economics enthusiasts, and anyone curious about geopolitics. No prior knowledge of trade statistics is required. The interface rewards exploration at any depth — from a quick choropleth glance to drilling from a country through its categories down to individual commodities.</p>
+        <ul class="bl">
+          <li>Explore how China's trade dominance grew from 2000 onward</li>
+          <li>Compare import and export intensities in any year</li>
+          <li>Drill from globe to country to category to commodity</li>
+          <li>Visualise bilateral trade connections as animated arcs</li>
+          <li>Filter the entire map by trade category</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ PAGE 3 — MILESTONE 1 EDA ════════════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">03 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">Milestone 1 — Exploratory Data Analysis</div>
+      <h2>Understanding the Data Before Designing</h2>
+      <p>Before any design decision was made, we explored the raw dataset in Python. Four findings shaped design choices that remained stable throughout the entire project.</p>
+    </div>
+
+    <div class="g2" style="gap:8px;">
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="ss"><img src="process-book-assets/m1-loggraph.png" alt="Log distribution"></div>
+        <div class="card-dark">
+          <h3 style="margin-bottom:4px;">Finding 1 — Extreme Value Skew</h3>
+          <p>Trade values span many orders of magnitude. A linear scale makes most countries invisible. This led us to adopt a <strong>power scale (exponent 0.35)</strong> for the choropleth, compressing the China and US dominance while preserving gradient readability for smaller economies.</p>
+        </div>
+        <div class="ss"><img src="process-book-assets/m1-scatter.png" alt="Weight vs value"></div>
+        <div class="card-dark">
+          <h3 style="margin-bottom:4px;">Finding 2 — Weight vs. Value Split</h3>
+          <p>Raw materials are heavy and cheap; electronics and pharmaceuticals are light and expensive. This structural split directly motivated the <strong>USD / Weight toggle</strong> that runs through the entire dashboard — switching it reveals a completely different geographical distribution.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="ss"><img src="process-book-assets/m1-piechart.png" alt="Category shares"></div>
+        <div class="card-dark">
+          <h3 style="margin-bottom:4px;">Finding 3 — Category Concentration</h3>
+          <p>The top 5 categories (Mineral Fuels, Precious Stones, Pharmaceuticals, Vehicles, Aircraft) account for roughly 43% of total world trade value. This justified building dedicated <strong>category and commodity detail pages</strong> rather than keeping the data buried in country pop-ups.</p>
+        </div>
+        <div class="ss"><img src="process-book-assets/m1-linegraph.png" alt="Top economies"></div>
+        <div class="card-dark">
+          <h3 style="margin-bottom:4px;">Finding 4 — China's Rise</h3>
+          <p>China overtook most economies in export volume from 2000 onward, exhibiting uniquely rapid growth driven by WTO accession. This story arc became the centrepiece of the <strong>Trade Evolution</strong> race chart and motivated the year slider spanning all 29 years of the dataset.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ PAGE 4 — MILESTONE 2 DESIGN PLAN ════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">04 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">Milestone 2 — Design Plan and First Sketches</div>
+      <h2>The Three-Page Architecture</h2>
+      <p>By Milestone 2 we had crystallised a three-page structure. Each sketch represented a distinct interactive surface, with the globe as the persistent entry point across all of them.</p>
+    </div>
+
+    <div class="g3" style="align-items:start;">
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="card" style="padding:8px 10px;">
+          <h3 style="margin-bottom:4px;">Page 1 — Country Pop-Up</h3>
+          <p style="font-size:7pt;">Clicking a country opens a dashboard: top 3 imports and exports for the most recent year, trade balance as a 10-year rolling average, dual-axis temporal charts, top 10 export categories.</p>
+        </div>
+        <div class="ss"><img src="process-book-assets/m2-sketch1.png" alt="Sketch 1"></div>
+        <p class="cap">Sketch — Globe with country pop-up dashboard</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="card" style="padding:8px 10px;">
+          <h3 style="margin-bottom:4px;">Page 2 — Commodity Export Map</h3>
+          <p style="font-size:7pt;">The globe dynamically recolours nations based on user-selected criteria: commodity category, year, and metric (value or weight). A left panel hosts all the filter controls.</p>
+        </div>
+        <div class="ss"><img src="process-book-assets/m2-sketch2.png" alt="Sketch 2"></div>
+        <p class="cap">Sketch — Commodity export choropleth</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div class="card" style="padding:8px 10px;">
+          <h3 style="margin-bottom:4px;">Page 3 — Year Dashboard</h3>
+          <p style="font-size:7pt;">A big horizontal year slider drives all charts simultaneously: top 10 exporters by weight and value, top 10 commodities, a treemap of category market share, pop-up notes for historical events.</p>
+        </div>
+        <div class="ss"><img src="process-book-assets/m2-sketch3.png" alt="Sketch 3"></div>
+        <p class="cap">Sketch — Data analysis dashboard over time</p>
+      </div>
+
+    </div>
+
+    <div class="div"></div>
+
+    <div>
+      <div class="lbl">Milestone 2 — MVP at Submission</div>
+      <div class="g2" style="gap:7px;">
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div class="ss"><img src="process-book-assets/m2-mvp-map.png" alt="MVP map"></div>
+          <p class="cap">MVP — Interactive world map with basic coloring</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div class="ss"><img src="process-book-assets/m2-mvp-popup.png" alt="MVP popup"></div>
+          <p class="cap">MVP — Early country pop-up panel</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ PAGE 5 — DESIGN EVOLUTION ═══════════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">05 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">From Plan to Final — What Changed and Why</div>
+      <h2>Architecture Evolution</h2>
+    </div>
+
+    <div class="card">
+      <div style="display:grid;grid-template-columns:1fr 28px 1fr;gap:6px;align-items:center;margin-bottom:7px;">
+        <h3 style="margin:0;">Milestone 2 Plan</h3>
+        <div style="width:1px;height:14px;background:rgba(45,107,181,0.3);margin:0 auto;"></div>
+        <h3 style="margin:0;">Final Implementation</h3>
+      </div>
+      <div class="chrow"><span class="bef">Separate pages for filters (Page 2) and pop-up (Page 1)</span><span class="arr">→</span><span class="aft">Single persistent map with floating left-panel control bar</span></div>
+      <div class="chrow"><span class="bef">Country drill-down only — no sub-levels beyond categories list</span><span class="arr">→</span><span class="aft">Four-level drill-down: globe → country → category → commodity</span></div>
+      <div class="chrow"><span class="bef">Year dashboard as a standalone page with treemap</span><span class="arr">→</span><span class="aft">Year window with grouped bar charts and historical context note</span></div>
+      <div class="chrow"><span class="bef">Trade flows not planned</span><span class="arr">→</span><span class="aft">Animated bilateral arc lines, colour-coded per flow direction</span></div>
+      <div class="chrow"><span class="bef">No world-level overview page</span><span class="arr">→</span><span class="aft">Global Statistics window: bar charts, categories pie, evolution race</span></div>
+      <div class="chrow"><span class="bef">No search functionality</span><span class="arr">→</span><span class="aft">Full-text search across countries, categories, commodities and years</span></div>
+      <div class="chrow"><span class="bef">Globe only</span><span class="arr">→</span><span class="aft">Globe and flat Equal Earth projection toggle for whole-world view</span></div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:7px;">Final Globe — Three Choropleth States</h3>
+      <div class="g3" style="gap:7px;">
+        <div>
+          <div class="ss"><img src="process-book-assets/globe-imports.png" alt="Imports"></div>
+          <p class="cap" style="color:rgba(59,130,246,0.6);">Imports active — blue scale</p>
+        </div>
+        <div>
+          <div class="ss"><img src="process-book-assets/globe-exports.png" alt="Exports"></div>
+          <p class="cap" style="color:rgba(249,115,22,0.6);">Exports active — orange scale</p>
+        </div>
+        <div>
+          <div class="ss"><img src="process-book-assets/globe-both.png" alt="Both"></div>
+          <p class="cap" style="color:rgba(168,85,247,0.6);">Both active — purple scale</p>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:7px;">Equal Earth Flat Projection — Whole-World Overview</h3>
+      <div class="g2" style="gap:7px;">
+        <div>
+          <div class="ss"><img src="process-book-assets/flat-map-category.png" alt="Flat map category"></div>
+          <p class="cap">Flat view, Vehicles category filter, year 1999</p>
+        </div>
+        <div>
+          <div class="ss"><img src="process-book-assets/flat-map-world.png" alt="Flat map world"></div>
+          <p class="cap">Flat view, imports and exports combined, China tooltip</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ PAGE 6 — DETAIL PAGES ══════════════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">06 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">Detail Pages — Added Beyond the Original Plan</div>
+      <h2>Four Levels of Exploration</h2>
+      <p>The most significant addition to our Milestone 2 plan was the creation of dedicated pages for categories and commodities. Every element across every chart is navigable — clicking a pie slice, a bar label, or a country name pushes a new window onto the breadcrumb stack.</p>
+    </div>
+
+    <div class="g23" style="gap:8px;align-items:start;flex:1;min-height:0;">
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="ss"><img src="process-book-assets/country-france.png" alt="France page"></div>
+        <p class="cap">Country page — France, year 2010</p>
+        <div class="ss"><img src="process-book-assets/sunburst.png" alt="Sunburst"></div>
+        <p class="cap">Expanded sunburst — France trade categories breakdown</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="ss"><img src="process-book-assets/category-mineral.png" alt="Category page"></div>
+        <p class="cap">Category page — Mineral Fuels and Oils, year 1991</p>
+        <div class="g2" style="gap:6px;">
+          <div class="card-dark" style="padding:9px 11px;">
+            <h3 style="margin-bottom:5px;">Country Page</h3>
+            <ul class="bl" style="gap:3px;">
+              <li>Year slider synced with the global map</li>
+              <li>5 stat cards: imports, exports, balance, 10-year trend, world share</li>
+              <li>Top 3 import sources and export destinations, each clickable</li>
+              <li>Category pie chart — expandable to full SunburstPie</li>
+              <li>Evolution race chart, autoplay on open</li>
+            </ul>
+          </div>
+          <div class="card-dark" style="padding:9px 11px;">
+            <h3 style="margin-bottom:5px;">Category Page</h3>
+            <ul class="bl" style="gap:3px;">
+              <li>Supply Barometer: green, amber or red based on how many of 112 countries export this category</li>
+              <li>Commodity breakdown pie chart, year-aware proportions</li>
+              <li>Top 5 importers and exporters as bar charts</li>
+              <li>Evolution race chart, autoplay on open</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ PAGE 7 — FLOWS, SEARCH, STATS ══════════ -->
+<div class="page">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">07 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">Trade Flows, Global Statistics, Search and Year Pages</div>
+      <h2>Features Beyond the Original Scope</h2>
+    </div>
+
+    <div class="g2" style="gap:8px;flex:1;min-height:0;align-items:start;">
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="ss"><img src="process-book-assets/trade-flows-single.png" alt="Trade flows single"></div>
+        <p class="cap">Bilateral flow hover — Germany and France connection, year 2016</p>
+        <div class="ss"><img src="process-book-assets/trade-flows-all.png" alt="Trade flows all"></div>
+        <p class="cap">All trade flows active — animated arcs across Europe</p>
+        <div class="card-dark" style="padding:9px 11px;">
+          <h3 style="margin-bottom:4px;">Trade Flows — Technical Note</h3>
+          <p style="font-size:7pt;">Flow lines required the secondary Kaggle dataset to obtain partner-level data absent in the primary UN source. An invisible 18px hit-target layer sits above each visible 1.5px arc to allow comfortable hover detection. Because the secondary dataset lacks category breakdowns, flow arcs cannot be filtered by commodity category.</p>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div class="ss"><img src="process-book-assets/global-stats.png" alt="Global stats"></div>
+        <p class="cap">Global Statistics window — bar charts, categories pie, evolution race</p>
+        <div class="g2" style="gap:6px;">
+          <div>
+            <div class="ss"><img src="process-book-assets/search.png" alt="Search"></div>
+            <p class="cap">Search with supply barometer badges</p>
+          </div>
+          <div>
+            <div class="ss"><img src="process-book-assets/year-page.png" alt="Year 2002"></div>
+            <p class="cap">Year 2002 snapshot with historical context</p>
+          </div>
+        </div>
+        <div class="card-dark" style="padding:9px 11px;">
+          <h3 style="margin-bottom:4px;">Global Statistics</h3>
+          <p style="font-size:7pt;">Not in the original plan, the Global Statistics window emerged from the need for a world-level overview before drilling into countries. It features top 5 importers and exporters as horizontal bar charts, expandable to all 112 countries, a year-aware categories pie chart with import, export and both toggle, and the evolution race chart.</p>
+          <div class="div" style="margin:6px 0;"></div>
+          <h3 style="margin-bottom:4px;">Year Pages and Search</h3>
+          <p style="font-size:7pt;">Each year from 1988 to 2016 has a dedicated window with global totals, a historical context note, and grouped bar charts for top categories and top countries. The search bar provides full-text lookup across all entities and shows supply barometer badges next to each category and commodity result.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ═══════════════════════ PAGE 8 — TEAM & CONCLUSION ══════════════ -->
+<div class="page" style="page-break-after:auto;">
+  <div class="hdr">
+    <div class="logo"><span class="logo-g">Geo</span><span class="logo-f">Flux</span> <span style="font-size:7.5pt;font-weight:400;color:rgba(147,197,253,0.3);margin-left:5px;">Process Book</span></div>
+    <div class="pgn">08 / 08</div>
+  </div>
+  <div class="body">
+
+    <div>
+      <div class="lbl">Key Challenges and Solutions</div>
+      <div class="g2" style="gap:7px;">
+        <div class="card-dark" style="padding:9px 11px;">
+          <h3 style="margin-bottom:4px;">Data Scale and Aggregation</h3>
+          <p style="font-size:7pt;">The raw dataset has 8.2 million rows, too large for any browser. We pre-aggregated aggressively in Python: country-by-year totals, category-by-year global totals, commodity-by-year totals, and a bilateral trade connections JSON. The frontend reads only these summaries, keeping the app fully static and fast.</p>
+        </div>
+        <div class="card-dark" style="padding:9px 11px;">
+          <h3 style="margin-bottom:4px;">Year-Specific Category Data Per Country</h3>
+          <p style="font-size:7pt;">The per-category breakdown per country only exists for the 2016 reference year. For year-aware pie charts, we scale each 2016 value by the ratio of the global category total at the target year versus 2016, capturing inter-category growth rate differences so pie proportions change meaningfully across years.</p>
+        </div>
+        <div class="card-dark" style="padding:9px 11px;">
+          <h3 style="margin-bottom:4px;">Bilateral Trade Asymmetry</h3>
+          <p style="font-size:7pt;">France's reported trade with Germany differs from Germany's reported trade with France — each country reports independently. Rather than reconciling the data, we surface this fact in the tooltip footnote. The asymmetry is itself an interesting feature of trade statistics.</p>
+        </div>
+        <div class="card-dark" style="padding:9px 11px;">
+          <h3 style="margin-bottom:4px;">State Persistence Across Navigation</h3>
+          <p style="font-size:7pt;">All shared state — imports and exports toggles, metric, category filter, year, fly-to requests, and projection mode — lives in Nuxt useState composables persisting across client-side navigation. The map in the layout is never destroyed as users open and close country or category pages.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="div"></div>
+
+    <div>
+      <div class="lbl">Peer Assessment</div>
+      <div class="g2" style="gap:7px;">
+        <div class="mc">
+          <div class="mn">Coralie Banuls</div>
+          <div class="mr">Core Architecture, Data and D3</div>
+          <div class="mt">Set up Mapbox and the core dashboard architecture. Wrote the majority of D3 components (BarChartRace, PieChart, SunburstPie, GroupedBarChart, BarChart, LineChart). Handled all data processing in Python and JSON generation. Implemented the PageWindow system, navigation history, category and commodity pages, global stats, supply barometer, search enhancements, flat map toggle and GeoFlux logo. Produced the project screencast. Wrote and edited the process book.</div>
+        </div>
+        <div class="mc">
+          <div class="mn">Lucas Martiniano</div>
+          <div class="mr">Map Coloring and Base Charts</div>
+          <div class="mt">Implemented global map coloring — choropleth for imports, exports and combined views. Disabled hover and click interactions for countries absent from the dataset. Built the initial D3 pie chart and bar chart components that are reused across multiple pages throughout the dashboard.</div>
+        </div>
+        <div class="mc">
+          <div class="mn">Jaime Lopez</div>
+          <div class="mr">Choropleth Extensions and Trade Connections</div>
+          <div class="mt">Expanded the choropleth to support coloring by USD, weight and individual categories, broken down by imports and exports. Collaborated on the trade connection arc rendering, animated dot system and Mapbox layer setup for bilateral flows. Contributed to the process book.</div>
+        </div>
+        <div class="mc">
+          <div class="mn">Jason Miller</div>
+          <div class="mr">Search and Documentation</div>
+          <div class="mt">Built the full-text search functionality across countries, categories, commodities and years, including the keyboard shortcut. Collaborated on the trade connection line tooltip and interaction system. Documented the project design and architecture. Contributed to the process book.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="div"></div>
+
+    <div class="card" style="padding:11px 14px;">
+      <h3 style="margin-bottom:5px;">Conclusion</h3>
+      <p>The gap between our Milestone 2 sketches and the final result is significant, but every divergence was driven by a real user-experience motivation rather than scope creep. Adding category and commodity pages turned a two-level exploration (world to country) into a full four-level drill-down, which we believe is the most distinctive aspect of GeoFlux.</p>
+      <div class="div" style="margin:7px 0;"></div>
+      <p>The consistent semantic colour language — blue for imports, orange for exports, purple for both — runs through every chart, map layer, button state and tooltip across the dashboard, giving the interface a coherence that makes it intuitive without needing to read labels.</p>
+      <div style="margin-top:8px;text-align:right;">
+        <span style="font-size:6.5pt;color:rgba(147,197,253,0.3);font-style:italic;">EPFL COM-480 Data Visualisation, Spring 2026</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+</body>
+</html>
