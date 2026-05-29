@@ -25,21 +25,28 @@
               GeoFlux is a data visualisation project exploring world trade flows from <strong class="text-white/90">1988 to 2016</strong> across 112 countries, 16 trade categories and hundreds of commodities.
             </p>
             <p>
-              The globe shows import/export intensities per country as a choropleth. Toggle <em>Imports</em>, <em>Exports</em>, and <em>Trade Flows</em> on the left panel to explore bilateral connections. Use the year slider to travel through time.
+              The globe shows import/export intensities per country as a choropleth. Toggle <em>Trade Flows</em> on the left panel to explore bilateral connections. Use the year slider to travel through time.
             </p>
             <p>
-              Click any country to open its detail page — trade balance, top partners, evolution chart, and commodity breakdown. Use the search bar to jump directly to a country, category, or commodity.
+              Click any country to open its detail page: trade balance, top partners, evolution over time, and commodity breakdown. Use the search bar to jump directly to a country, category, commodity or year.
             </p>
             <p>
-              The supply barometer (🟢 / 🟡 / 🔴) indicates how many countries export a given category — a measure of trade concentration and globalisation.
+              The supply barometer (🟢 / 🟡 / 🔴) indicates how many countries export a given category or commodity, a measure of trade concentration and globalisation.
             </p>
           </div>
           <div class="mt-5 pt-4 border-t border-[#2d6bb5]/25 text-[11px] text-[#93c5fd]/40">
-            EPFL Master's project · Data: UN Comtrade
+            EPFL project · Data: UN Comtrade
           </div>
         </div>
       </div>
     </Transition>
+
+    <!-- Logo -->
+    <div class="absolute top-5 left-5 z-30 pointer-events-none select-none">
+      <span class="text-2xl font-bold tracking-tight leading-none">
+        <span class="text-white">Geo</span><span :class="fluxColor" class="transition-colors duration-500">Flux</span>
+      </span>
+    </div>
 
     <div class="absolute top-5 left-1/2 transform -translate-x-1/2 flex items-start gap-2 z-30 pointer-events-auto">
 
@@ -50,6 +57,20 @@
         title="Reset to home view"
       >
         <UIcon name="i-heroicons-home" class="size-5" />
+      </button>
+
+      <!-- Globe / Flat map toggle -->
+      <button
+        @click="mapFlat = !mapFlat"
+        :class="[
+          'flex items-center justify-center w-11 h-11 rounded-xl border backdrop-blur-sm transition-all shrink-0',
+          mapFlat
+            ? 'bg-blue-500/20 border-blue-400/40 text-blue-200 hover:bg-blue-500/30'
+            : 'bg-white/10 border-white/15 text-white/75 hover:bg-white/20 hover:text-white'
+        ]"
+        :title="mapFlat ? 'Switch to globe view' : 'Switch to flat world map'"
+      >
+        <UIcon :name="mapFlat ? 'i-heroicons-globe-alt' : 'i-heroicons-map'" class="size-5" />
       </button>
 
       <SearchBar ref="searchBar" />
@@ -169,10 +190,16 @@ import { CATEGORIES, YEARS } from '~/utils/dummyData'
 definePageMeta({ layout: 'canvas' })
 
 const router = useRouter()
-const { showImports, showExports, metric, selectedCategory, showFlows, selectedYear, flyToRequest } = useTradeState()
+const { showImports, showExports, metric, selectedCategory, showFlows, selectedYear, flyToRequest, mapFlat } = useTradeState()
 
 const searchBar = ref()
 const infoOpen  = ref(false)
+
+const fluxColor = computed(() => {
+  if (showFlows.value || (showImports.value && showExports.value)) return 'text-purple-400'
+  if (showExports.value) return 'text-orange-400'
+  return 'text-blue-400'
+})
 
 function goHome() {
   showImports.value      = false
@@ -181,6 +208,7 @@ function goHome() {
   showFlows.value        = false
   selectedCategory.value = null
   selectedYear.value     = 2016
+  mapFlat.value          = false
   flyToRequest.value     = { center: [7.44, 46.95], zoom: 3.5, stamp: Date.now() }
   router.push('/')
 }

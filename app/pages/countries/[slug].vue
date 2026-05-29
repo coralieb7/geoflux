@@ -186,117 +186,125 @@
 
       </div>
 
-      <!-- Rows 2–3: [Sources stacked / Destinations] | [Pie (row-span-2)] | [Evolution (row-span-2)] -->
-      <div class="grid grid-cols-[1fr_1fr_3fr] grid-rows-2 gap-2 flex-1 min-h-0">
+      <!-- Trade partners row + main content -->
+      <div class="flex flex-col gap-2 flex-1 min-h-0">
 
-        <!-- Row 1 Col 1: Top Import Sources -->
-        <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20" style="grid-row: 1; grid-column: 1;">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Import Sources</h3>
-          <button @click="nav.push(`/years/${selectedYear}`, c.name)" class="text-[10px] text-[#93c5fd]/45 hover:text-[#93c5fd] transition-colors text-left">Year {{ selectedYear }}</button>
-          <div v-if="tradeConnections" class="flex flex-col gap-0.5 mt-0.5">
-            <button
-              v-for="(pct, country) in tradeConnections.top3importers"
-              :key="country"
-              class="flex items-center justify-between w-full text-left px-1 py-0.5 rounded hover:bg-[#1a3a5c] transition-colors -mx-1"
-              :class="isNavigableIso(String(country)) ? 'cursor-pointer' : 'cursor-default'"
-              @click="isNavigableIso(String(country)) && nav.push(`/countries/${String(country).toLowerCase()}`, c.name)"
-            >
-              <span class="text-xs text-white/75 truncate">{{ iso3ToName(String(country)) }}</span>
-              <span class="text-xs font-semibold text-blue-300 shrink-0 ml-1">{{ (pct as number).toFixed(1) }}%</span>
-            </button>
-          </div>
-          <p v-else class="text-xs text-[#93c5fd]/40">No data</p>
-        </div>
+        <!-- Compact top partners side-by-side -->
+        <div class="flex gap-2 shrink-0">
 
-        <!-- Row 2 Col 1: Top Export Destinations -->
-        <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20" style="grid-row: 2; grid-column: 1;">
-          <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Export Destinations</h3>
-          <button @click="nav.push(`/years/${selectedYear}`, c.name)" class="text-[10px] text-[#93c5fd]/45 hover:text-[#93c5fd] transition-colors text-left">Year {{ selectedYear }}</button>
-          <div v-if="tradeConnections" class="flex flex-col gap-0.5 mt-0.5">
-            <button
-              v-for="(pct, country) in tradeConnections.top3exportCountries"
-              :key="country"
-              class="flex items-center justify-between w-full text-left px-1 py-0.5 rounded hover:bg-[#1a3a5c] transition-colors -mx-1"
-              :class="isNavigableIso(String(country)) ? 'cursor-pointer' : 'cursor-default'"
-              @click="isNavigableIso(String(country)) && nav.push(`/countries/${String(country).toLowerCase()}`, c.name)"
-            >
-              <span class="text-xs text-white/75 truncate">{{ iso3ToName(String(country)) }}</span>
-              <span class="text-xs font-semibold text-orange-300 shrink-0 ml-1">{{ (pct as number).toFixed(1) }}%</span>
-            </button>
-          </div>
-          <p v-else class="text-xs text-[#93c5fd]/40">No data</p>
-        </div>
-
-        <!-- Col 2, rows 1–2: Pie chart (expandable) -->
-        <div
-          class="row-span-2 bg-[#071828] rounded-xl p-3 flex flex-col gap-2 cursor-pointer hover:bg-[#0f2540] transition-colors border border-[#2d6bb5]/20"
-          style="grid-row: 1 / span 2; grid-column: 2;"
-          @click="pieFullScreen = true"
-        >
-          <div class="flex items-center justify-between shrink-0">
-            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">
-              Categories —
-              <button @click.stop="nav.push(`/years/${selectedYear}`, c.name)" class="hover:text-[#93c5fd] transition-colors">{{ selectedYear }}</button>
-            </h3>
-            <div class="flex items-center gap-1.5">
-              <div class="flex gap-0.5" @click.stop>
-                <button
-                  v-for="opt in PIE_MODE_OPTS"
-                  :key="opt.key"
-                  @click="pieMode = opt.key"
-                  :class="pieMode === opt.key
-                    ? 'bg-[#2d6bb5] text-white'
-                    : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
-                  class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
-                >{{ opt.label }}</button>
-              </div>
-              <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5 text-[#93c5fd]/55" />
+          <!-- Top Import Sources -->
+          <div class="flex-1 bg-[#071828] rounded-xl border border-[#2d6bb5]/20 px-3 py-2 flex flex-col gap-1">
+            <div class="flex items-center justify-between">
+              <h3 class="text-[10px] font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Import Sources</h3>
+              <button @click="nav.push(`/years/${selectedYear}`, c.name)" class="text-[10px] text-[#93c5fd]/40 hover:text-[#93c5fd] transition-colors leading-none">{{ selectedYear }}</button>
             </div>
-          </div>
-          <div class="flex-1 min-h-0">
-            <D3PieChart :slices="pieSlices" :format-value="formatUsd" />
-          </div>
-          <p class="text-xs text-[#93c5fd]/40 text-center shrink-0">Click to explore</p>
-        </div>
-
-        <!-- Col 3, rows 1–2: Evolution (row-span-2, expandable) -->
-        <div
-          class="row-span-2 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20"
-          style="grid-row: 1 / span 2; grid-column: 3;"
-        >
-          <div class="flex items-center justify-between shrink-0 mb-2">
-            <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">Evolution Over Time</h3>
-            <div class="flex items-center gap-1">
-              <div class="flex gap-0.5">
-                <button
-                  v-for="opt in EVO_METRIC_OPTS"
-                  :key="opt.key"
-                  @click="evoMetric = opt.key"
-                  :class="evoMetric === opt.key
-                    ? 'bg-[#2d6bb5] text-white'
-                    : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
-                  class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
-                >{{ opt.label }}</button>
-              </div>
+            <div v-if="tradeConnections" class="flex flex-col gap-px">
               <button
-                @click="evoFullScreen = true"
-                class="p-1 rounded hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
-                title="Expand"
+                v-for="(pct, country) in tradeConnections.top3importers"
+                :key="country"
+                class="flex items-center justify-between w-full text-left px-1 py-0.5 rounded hover:bg-[#1a3a5c] transition-colors"
+                :class="isNavigableIso(String(country)) ? '' : 'pointer-events-none'"
+                @click="isNavigableIso(String(country)) && nav.push(`/countries/${String(country).toLowerCase()}`, c.name)"
               >
-                <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5" />
+                <span class="text-xs text-white/70 truncate">{{ iso3ToName(String(country)) }}</span>
+                <span class="text-[11px] font-semibold text-blue-300 shrink-0 ml-2">{{ (pct as number).toFixed(1) }}%</span>
               </button>
             </div>
+            <p v-else class="text-[11px] text-[#93c5fd]/35 leading-none">No data</p>
           </div>
-          <div class="flex-1 min-h-0">
-            <D3BarChartRace
-              :series="evolutionSeries"
-              :format-value="evoMetric === 'usd' ? formatUsd : formatWeight"
-              :auto-play="true"
-              :hide-year-scrubber="true"
-            />
+
+          <!-- Top Export Destinations -->
+          <div class="flex-1 bg-[#071828] rounded-xl border border-[#2d6bb5]/20 px-3 py-2 flex flex-col gap-1">
+            <div class="flex items-center justify-between">
+              <h3 class="text-[10px] font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Export Destinations</h3>
+              <button @click="nav.push(`/years/${selectedYear}`, c.name)" class="text-[10px] text-[#93c5fd]/40 hover:text-[#93c5fd] transition-colors leading-none">{{ selectedYear }}</button>
+            </div>
+            <div v-if="tradeConnections" class="flex flex-col gap-px">
+              <button
+                v-for="(pct, country) in tradeConnections.top3exportCountries"
+                :key="country"
+                class="flex items-center justify-between w-full text-left px-1 py-0.5 rounded hover:bg-[#1a3a5c] transition-colors"
+                :class="isNavigableIso(String(country)) ? '' : 'pointer-events-none'"
+                @click="isNavigableIso(String(country)) && nav.push(`/countries/${String(country).toLowerCase()}`, c.name)"
+              >
+                <span class="text-xs text-white/70 truncate">{{ iso3ToName(String(country)) }}</span>
+                <span class="text-[11px] font-semibold text-orange-300 shrink-0 ml-2">{{ (pct as number).toFixed(1) }}%</span>
+              </button>
+            </div>
+            <p v-else class="text-[11px] text-[#93c5fd]/35 leading-none">No data</p>
           </div>
+
         </div>
 
+        <!-- Pie + Evolution row -->
+        <div class="flex gap-2 flex-1 min-h-0">
+
+          <!-- Pie chart (expandable) -->
+          <div
+            class="w-[32%] bg-[#071828] rounded-xl p-3 flex flex-col gap-2 border border-[#2d6bb5]/20 hover:bg-[#0f2540] transition-colors"
+            @click="pieFullScreen = true"
+          >
+            <div class="flex items-center justify-between shrink-0">
+              <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">
+                Categories —
+                <button @click.stop="nav.push(`/years/${selectedYear}`, c.name)" class="hover:text-[#93c5fd] transition-colors">{{ selectedYear }}</button>
+              </h3>
+              <div class="flex items-center gap-1" @click.stop>
+                <div class="flex gap-0.5">
+                  <button
+                    v-for="opt in PIE_MODE_OPTS"
+                    :key="opt.key"
+                    @click="pieMode = opt.key"
+                    :class="pieMode === opt.key
+                      ? 'bg-[#2d6bb5] text-white'
+                      : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
+                    class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
+                  >{{ opt.label }}</button>
+                </div>
+                <UIcon name="i-heroicons-arrows-pointing-out" class="size-3 text-[#93c5fd]/40 ml-0.5" />
+              </div>
+            </div>
+            <div class="flex-1 min-h-0">
+              <D3PieChart :slices="pieSlices" :format-value="formatUsd" />
+            </div>
+          </div>
+
+          <!-- Evolution (expandable) -->
+          <div class="flex-1 bg-[#071828] rounded-xl p-3 flex flex-col border border-[#2d6bb5]/20">
+            <div class="flex items-center justify-between shrink-0 mb-2">
+              <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide">Evolution Over Time</h3>
+              <div class="flex items-center gap-1">
+                <div class="flex gap-0.5">
+                  <button
+                    v-for="opt in EVO_METRIC_OPTS"
+                    :key="opt.key"
+                    @click="evoMetric = opt.key"
+                    :class="evoMetric === opt.key
+                      ? 'bg-[#2d6bb5] text-white'
+                      : 'bg-[#0d2545] text-[#93c5fd]/55 hover:bg-[#1a3a5c] border border-[#2d6bb5]/25'"
+                    class="text-[9px] px-1.5 py-0.5 rounded transition-colors font-medium leading-none"
+                  >{{ opt.label }}</button>
+                </div>
+                <button
+                  @click="evoFullScreen = true"
+                  class="p-1 rounded hover:bg-[#1a3a5c] transition-colors text-[#93c5fd]/70 hover:text-[#93c5fd]"
+                  title="Expand"
+                >
+                  <UIcon name="i-heroicons-arrows-pointing-out" class="size-3.5" />
+                </button>
+              </div>
+            </div>
+            <div class="flex-1 min-h-0">
+              <D3BarChartRace
+                :series="evolutionSeries"
+                :format-value="evoMetric === 'usd' ? formatUsd : formatWeight"
+                :auto-play="true"
+                :hide-year-scrubber="true"
+              />
+            </div>
+          </div>
+
+        </div>
       </div>
     </div>
   </PageWindow>

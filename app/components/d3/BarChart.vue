@@ -36,7 +36,9 @@ function draw() {
 
   const fmt = props.formatValue ?? ((v: number) => d3.format(',.0f')(v))
 
-  // Bars
+  const clickable = !!props.onBarClick
+
+  // Bars (visual only — click handled by label)
   svg.selectAll('rect')
     .data(props.data)
     .join('rect')
@@ -47,10 +49,8 @@ function draw() {
     .attr('rx', 4)
     .attr('fill', (d, i) => d.color ?? (i % 2 === 0 ? '#3b82f6' : '#f97316'))
     .attr('opacity', 0.85)
-    .style('cursor', props.onBarClick ? 'pointer' : 'default')
-    .on('click', (_, d) => props.onBarClick?.(d))
 
-  // Labels (left)
+  // Labels (left) — clickable, with hover highlight
   svg.selectAll('.label')
     .data(props.data)
     .join('text')
@@ -59,9 +59,17 @@ function draw() {
     .attr('y', d => y(d.label)! + y.bandwidth() / 2)
     .attr('dy', '0.35em')
     .attr('text-anchor', 'end')
-    .attr('fill', 'rgba(147,197,253,0.6)')
+    .attr('fill', 'rgba(147,197,253,0.7)')
     .attr('font-size', 12)
+    .style('cursor', clickable ? 'pointer' : 'default')
     .text(d => d.label.length > 14 ? d.label.slice(0, 13) + '…' : d.label)
+    .on('click', (_, d) => props.onBarClick?.(d))
+    .on('mouseover', function() {
+      if (clickable) d3.select(this).attr('fill', 'rgba(147,197,253,1)').attr('font-weight', '600')
+    })
+    .on('mouseout', function() {
+      d3.select(this).attr('fill', 'rgba(147,197,253,0.7)').attr('font-weight', 'normal')
+    })
 
   // Value labels (right)
   svg.selectAll('.val')

@@ -61,7 +61,7 @@ const config = useRuntimeConfig()
 const router = useRouter()
 const route  = useRoute()
 
-const { showImports, showExports, metric, selectedCategory, showFlows, selectedYear, flyToRequest } = useTradeState()
+const { showImports, showExports, metric, selectedCategory, showFlows, selectedYear, flyToRequest, mapFlat } = useTradeState()
 
 const mapContainer = ref<HTMLElement | null>(null)
 let map: mapboxgl.Map | null = null
@@ -361,6 +361,26 @@ watch(flyToRequest, (req) => {
   if (!req || !map || !mapReady) return
   map.flyTo({ center: req.center, zoom: req.zoom, duration: 1500, essential: true })
   flyToRequest.value = null
+})
+
+// World bounds with slight padding so the map can't be dragged to empty space
+const FLAT_BOUNDS: [[number, number], [number, number]] = [[-210, -72], [210, 80]]
+
+watch(mapFlat, (flat) => {
+  if (!map || !mapReady) return
+  if (flat) {
+    ;(map as any).setProjection('equalEarth')
+    map.setMinZoom(1.3)
+    map.setMaxZoom(5)
+    map.setMaxBounds(FLAT_BOUNDS)
+    map.flyTo({ center: [10, 15], zoom: 1.6, pitch: 0, bearing: 0, duration: 1200, essential: true })
+  } else {
+    ;(map as any).setProjection('globe')
+    map.setMaxBounds(undefined as any)
+    map.setMinZoom(2)
+    map.setMaxZoom(5)
+    map.flyTo({ center: [0, 45], zoom: 1.5, pitch: 10, bearing: 0, duration: 1200, essential: true })
+  }
 })
 
 // ─── Map initialisation ───────────────────────────────────────────────────────
