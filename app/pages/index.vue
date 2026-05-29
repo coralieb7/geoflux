@@ -175,8 +175,12 @@ const searchBar = ref()
 const infoOpen  = ref(false)
 
 function goHome() {
+  showImports.value      = false
+  showExports.value      = false
+  metric.value           = 'usd'
   showFlows.value        = false
   selectedCategory.value = null
+  selectedYear.value     = 2016
   flyToRequest.value     = { center: [7.44, 46.95], zoom: 3.5, stamp: Date.now() }
   router.push('/')
 }

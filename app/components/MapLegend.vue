@@ -2,7 +2,7 @@
   <Transition name="legend">
     <div
       v-if="visible"
-      class="absolute bottom-6 left-6 z-20 flex flex-col gap-1.5 rounded-xl border border-white/10 bg-black/60 px-4 py-3 backdrop-blur-md pointer-events-none"
+      class="absolute bottom-6 left-6 z-20 flex flex-col gap-1.5 rounded-xl border border-[#2d6bb5]/35 bg-[#0d2545]/90 px-4 py-3 backdrop-blur-md pointer-events-none"
     >
       <div v-for="item in LEGEND_ITEMS" :key="item.label" class="flex items-center gap-2.5">
         <span class="h-2.5 w-2.5 rounded-full flex-shrink-0" :style="{ background: item.color }" />

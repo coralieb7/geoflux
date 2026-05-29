@@ -96,6 +96,11 @@
         >{{ selectedYear }}</button>
       </div>
 
+      <!-- Description box -->
+      <div v-if="categoryDescription" class="bg-[#071828]/60 border border-[#2d6bb5]/15 rounded-lg px-3 py-2 shrink-0">
+        <p class="text-[11px] text-[#93c5fd]/50 leading-relaxed">{{ categoryDescription }}</p>
+      </div>
+
       <!-- Row 1: 5 stat cards -->
       <div class="grid grid-cols-5 gap-2 shrink-0">
 
@@ -233,6 +238,7 @@
 import { TRADE_DATA, CATEGORIES, YEARS, countCategoryExporters, getBarometerLevel } from '~/utils/dummyData'
 import { getCategoryYearlySeries, getCommoditiesByCategory } from '~/utils/tradeExtended'
 import { formatUsd, formatWeight, formatGrowth, formatPercent, slugToCategory } from '~/utils/formatters'
+import { getCategoryDescription } from '~/utils/labels'
 import { useNavHistory } from '~/composables/useNavHistory'
 import type { PieSlice } from '~/components/d3/PieChart.vue'
 
@@ -243,6 +249,8 @@ const nav   = useNavHistory()
 
 const slug     = computed(() => route.params.slug as string)
 const category = computed(() => slugToCategory(slug.value, CATEGORIES) ?? slug.value)
+
+const categoryDescription = computed(() => getCategoryDescription(category.value))
 
 if (!slugToCategory(slug.value, CATEGORIES)) await navigateTo('/')
 

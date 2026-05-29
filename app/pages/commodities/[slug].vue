@@ -1,5 +1,5 @@
 <template>
-  <PageWindow :title="com.name">
+  <PageWindow :title="prettifyCommodityName(com.name)">
     <div class="relative flex flex-col gap-2 h-full">
 
       <!-- Full-screen evolution overlay -->
@@ -50,6 +50,15 @@
           class="text-xs font-semibold text-[#93c5fd]/60 hover:text-[#93c5fd] w-9 text-right shrink-0 transition-colors"
           title="Open year page"
         >{{ selectedYear }}</button>
+      </div>
+
+      <!-- Description box -->
+      <div class="bg-[#071828]/60 border border-[#2d6bb5]/15 rounded-lg px-3 py-2 shrink-0">
+        <p class="text-[11px] text-[#93c5fd]/50 leading-relaxed">
+          <span class="text-[#93c5fd]/35 mr-1">Classification:</span>{{ com.name }}
+          <span v-if="categoryDescription" class="ml-3 text-[#93c5fd]/35">·</span>
+          <span v-if="categoryDescription" class="ml-3">{{ categoryDescription }}</span>
+        </p>
       </div>
 
       <!-- Row 1: 5 stat cards -->
@@ -155,6 +164,7 @@
 import { TRADE_DATA, YEARS, countCategoryExporters, getBarometerLevel } from '~/utils/dummyData'
 import { getCommodityById, getCommodityYearlySeries, getCategoryYearlySeries } from '~/utils/tradeExtended'
 import { formatUsd, formatWeight, formatGrowth, formatPercent, categoryToSlug } from '~/utils/formatters'
+import { prettifyCommodityName, getCategoryDescription } from '~/utils/labels'
 import { useNavHistory } from '~/composables/useNavHistory'
 
 definePageMeta({ layout: 'canvas' })
@@ -167,8 +177,9 @@ const raw  = computed(() => getCommodityById(slug.value))
 
 if (!raw.value) await navigateTo('/')
 
-const com          = computed(() => raw.value!)
-const categorySlug = computed(() => categoryToSlug(com.value.category))
+const com               = computed(() => raw.value!)
+const categorySlug      = computed(() => categoryToSlug(com.value.category))
+const categoryDescription = computed(() => getCategoryDescription(com.value.category))
 const series       = computed(() => getCommodityYearlySeries(com.value))
 const catSeries    = computed(() => getCategoryYearlySeries(com.value.category))
 

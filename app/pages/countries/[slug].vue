@@ -193,15 +193,17 @@
         <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20" style="grid-row: 1; grid-column: 1;">
           <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Import Sources</h3>
           <button @click="nav.push(`/years/${selectedYear}`, c.name)" class="text-[10px] text-[#93c5fd]/45 hover:text-[#93c5fd] transition-colors text-left">Year {{ selectedYear }}</button>
-          <div v-if="tradeConnections" class="flex flex-col gap-1 mt-0.5">
-            <div
+          <div v-if="tradeConnections" class="flex flex-col gap-0.5 mt-0.5">
+            <button
               v-for="(pct, country) in tradeConnections.top3importers"
               :key="country"
-              class="flex items-center justify-between"
+              class="flex items-center justify-between w-full text-left px-1 py-0.5 rounded hover:bg-[#1a3a5c] transition-colors -mx-1"
+              :class="isNavigableIso(String(country)) ? 'cursor-pointer' : 'cursor-default'"
+              @click="isNavigableIso(String(country)) && nav.push(`/countries/${String(country).toLowerCase()}`, c.name)"
             >
-              <span class="text-xs text-white/75 truncate">{{ iso3ToName(country) }}</span>
-              <span class="text-xs font-semibold text-blue-300 shrink-0 ml-1">{{ pct.toFixed(1) }}%</span>
-            </div>
+              <span class="text-xs text-white/75 truncate">{{ iso3ToName(String(country)) }}</span>
+              <span class="text-xs font-semibold text-blue-300 shrink-0 ml-1">{{ (pct as number).toFixed(1) }}%</span>
+            </button>
           </div>
           <p v-else class="text-xs text-[#93c5fd]/40">No data</p>
         </div>
@@ -210,15 +212,17 @@
         <div class="bg-[#071828] rounded-xl p-3 flex flex-col gap-1.5 border border-[#2d6bb5]/20" style="grid-row: 2; grid-column: 1;">
           <h3 class="text-xs font-semibold text-[#93c5fd]/55 uppercase tracking-wide leading-none">Top Export Destinations</h3>
           <button @click="nav.push(`/years/${selectedYear}`, c.name)" class="text-[10px] text-[#93c5fd]/45 hover:text-[#93c5fd] transition-colors text-left">Year {{ selectedYear }}</button>
-          <div v-if="tradeConnections" class="flex flex-col gap-1 mt-0.5">
-            <div
+          <div v-if="tradeConnections" class="flex flex-col gap-0.5 mt-0.5">
+            <button
               v-for="(pct, country) in tradeConnections.top3exportCountries"
               :key="country"
-              class="flex items-center justify-between"
+              class="flex items-center justify-between w-full text-left px-1 py-0.5 rounded hover:bg-[#1a3a5c] transition-colors -mx-1"
+              :class="isNavigableIso(String(country)) ? 'cursor-pointer' : 'cursor-default'"
+              @click="isNavigableIso(String(country)) && nav.push(`/countries/${String(country).toLowerCase()}`, c.name)"
             >
-              <span class="text-xs text-white/75 truncate">{{ iso3ToName(country) }}</span>
-              <span class="text-xs font-semibold text-orange-300 shrink-0 ml-1">{{ pct.toFixed(1) }}%</span>
-            </div>
+              <span class="text-xs text-white/75 truncate">{{ iso3ToName(String(country)) }}</span>
+              <span class="text-xs font-semibold text-orange-300 shrink-0 ml-1">{{ (pct as number).toFixed(1) }}%</span>
+            </button>
           </div>
           <p v-else class="text-xs text-[#93c5fd]/40">No data</p>
         </div>
@@ -483,6 +487,10 @@ const evolutionSeries = computed(() => [
 
 // ── Trade connections ──────────────────────────────────────────────────────
 const tradeConnections = computed(() => getTradeConnections(c.value.iso3, String(selectedYear.value)))
+
+function isNavigableIso(iso3: string): boolean {
+  return TRADE_DATA.some(ct => ct.iso3.toUpperCase() === iso3.toUpperCase())
+}
 </script>
 
 <style scoped>
